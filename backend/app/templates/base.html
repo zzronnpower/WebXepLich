@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ tieu_de or "Lich lam viec" }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <div class="nen-anh"></div>
+    <header class="thanh-dieu-huong">
+      <div class="logo">Studio Lich Lam Viec</div>
+      <nav>
+        <a href="/">Trang chủ</a>
+        <a href="/quan-ly">Quản lý</a>
+        <a href="/nhan-vien">Nhân viên</a>
+        <a href="/ngay-nghi">Ngày nghỉ</a>
+        <a href="/nhu-cau-ca">Nhu cầu ca</a>
+        <a href="/trong-so">Trọng số</a>
+        <a href="/thu-nghiem">Kiểm thử tối ưu</a>
+      </nav>
+    </header>
+    <main class="noi-dung">
+      {% block noi_dung %}{% endblock %}
+    </main>
+  </body>
+</html>

@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block noi_dung %}
+  <section class="khung">
+    <div class="tieu-de-hang">
+      <h2>Nhân viên</h2>
+      <form class="form-tim" action="/nhan-vien" method="get">
+        <input type="text" name="q" placeholder="Tìm theo tên" />
+        <button class="nut-phu" type="submit">Tìm</button>
+      </form>
+    </div>
+    <div class="luoi-2">
+      <form class="the form-luoi" action="/nhan-vien" method="post">
+        <h3 class="truong--rong">Thêm nhân viên</h3>
+        <div class="truong">
+          <label>Tên NV</label>
+          <input name="ten_nv" required />
+        </div>
+        <div class="truong">
+          <label>Vai trò (cách nhau bởi dấu phẩy)</label>
+          <input name="vai_tro" placeholder="Bác sỹ, KTV" />
+        </div>
+        <div class="truong">
+          <label>Cấp độ</label>
+          <select name="cap_do">
+            <option value="">Không chọn</option>
+            <option value="Bác sỹ mới">Bác sỹ mới</option>
+            <option value="Bác sỹ chính">Bác sỹ chính</option>
+          </select>
+        </div>
+        <div class="truong">
+          <label>Mức ưu tiên</label>
+          <input type="number" name="muc_uu_tien" value="0" />
+        </div>
+        <div class="truong">
+          <label>Giờ tối đa tuần</label>
+          <input type="number" name="gio_toi_da_tuan" value="44" />
+        </div>
+        <div class="truong">
+          <label>Ca ưa thích</label>
+          <select name="ca_ua_thich" multiple>
+            {% for ca in ds_ca %}
+              <option value="{{ ca.id }}">{{ ca.ten_ca }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="truong">
+          <label>Ca tránh</label>
+          <select name="ca_tranh" multiple>
+            {% for ca in ds_ca %}
+              <option value="{{ ca.id }}">{{ ca.ten_ca }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="truong">
+          <label>Chi nhánh (giới hạn làm việc)</label>
+          <select name="chi_nhanh" multiple>
+            {% for cn in ds_chi_nhanh %}
+              <option value="{{ cn.id }}">{{ cn.ten_chi_nhanh }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="truong">
+          <label>Trọng số 1</label>
+          <select name="trong_so_1_id">
+            <option value="">Không chọn</option>
+            {% for ts in ds_trong_so %}
+              <option value="{{ ts.id }}">{{ ten_trong_so_hien_thi(ts.khoa) }} ({{ ts.gia_tri }})</option>
+            {% endfor %}
+          </select>
+          <div class="goi-y" data-weight-label="trong_so_1"></div>
+        </div>
+        <div class="truong">
+          <label>Trọng số 2</label>
+          <select name="trong_so_2_id">
+            <option value="">Không chọn</option>
+            {% for ts in ds_trong_so %}
+              <option value="{{ ts.id }}">{{ ten_trong_so_hien_thi(ts.khoa) }} ({{ ts.gia_tri }})</option>
+            {% endfor %}
+          </select>
+          <div class="goi-y" data-weight-label="trong_so_2"></div>
+        </div>
+        <div class="truong">
+          <label>Trọng số 3</label>
+          <select name="trong_so_3_id">
+            <option value="">Không chọn</option>
+            {% for ts in ds_trong_so %}
+              <option value="{{ ts.id }}">{{ ten_trong_so_hien_thi(ts.khoa) }} ({{ ts.gia_tri }})</option>
+            {% endfor %}
+          </select>
+          <div class="goi-y" data-weight-label="trong_so_3"></div>
+        </div>
+        <div class="truong truong--rong">
+          <label>Ghi chú</label>
+          <textarea name="ghi_chu"></textarea>
+        </div>
+        <div class="hanh-dong">
+          <button class="nut-chinh" type="submit">Thêm</button>
+        </div>
+      </form>
+      <div class="the">
+        <h3>Danh sách</h3>
+        <div class="truong">
+          <label>Chọn nhân viên để điền form</label>
+          <select name="nhan_vien_id">
+            {% for nv in ds_nhan_vien %}
+              <option
+                value="{{ nv.id }}"
+                data-ma-nv="{{ nv.ma_nv }}"
+                data-ten-nv="{{ nv.ten_nv }}"
+                data-vai-tro="{{ nv.vai_tro | map(attribute='ten_vai_tro') | join(', ') }}"
+                data-cap-do="{{ nv.cap_do or '' }}"
+                data-muc-uu-tien="{{ nv.muc_uu_tien }}"
+                data-gio-toi-da-tuan="{{ nv.gio_toi_da_tuan }}"
+                data-ghi-chu="{{ nv.ghi_chu or '' }}"
+                data-ca-ua-thich="{{ nv.ca_ua_thich | map(attribute='id') | join(',') }}"
+                data-ca-tranh="{{ nv.ca_tranh | map(attribute='id') | join(',') }}"
+                data-chi-nhanh="{{ nv.chi_nhanh | map(attribute='id') | join(',') }}"
+                data-trong-so="{{ nv.trong_so_uu_tien | map(attribute='trong_so_id') | join(',') }}"
+              >
+                {{ nv.ma_nv }} - {{ nv.ten_nv }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <table class="bang-nho">
+          <thead>
+            <tr>
+              <th>Mã</th>
+              <th>Tên</th>
+              <th>Vai trò</th>
+              <th>Cấp độ</th>
+              <th>Ưu tiên</th>
+              <th>Trọng số cá nhân</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for nv in ds_nhan_vien %}
+              <tr>
+                <td>{{ nv.ma_nv }}</td>
+                <td>{{ nv.ten_nv }}</td>
+                <td>{% for vt in nv.vai_tro %}{{ vt.ten_vai_tro }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+                <td>{{ nv.cap_do or "-" }}</td>
+                <td>{{ nv.muc_uu_tien }}</td>
+                <td>
+                  {% if nv.trong_so_uu_tien %}
+                    {% for ts in nv.trong_so_uu_tien %}
+                      <div>{{ ten_trong_so_hien_thi(ts.trong_so.khoa) }} ({{ ts.trong_so.gia_tri }})</div>
+                    {% endfor %}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
+                  <form action="/nhan-vien/{{ nv.id }}/xoa" method="post">
+                    <button class="nut-phu" type="submit">Xóa</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.querySelector("form[action='/nhan-vien']")
+      const select = document.querySelector("select[name='nhan_vien_id']")
+      if (!form || !select) return
+      const fields = {
+        maNv: form.querySelector("input[name='ma_nv']"),
+        tenNv: form.querySelector("input[name='ten_nv']"),
+        vaiTro: form.querySelector("input[name='vai_tro']"),
+        capDo: form.querySelector("select[name='cap_do']"),
+        mucUuTien: form.querySelector("input[name='muc_uu_tien']"),
+        gioToiDa: form.querySelector("input[name='gio_toi_da_tuan']"),
+        ghiChu: form.querySelector("textarea[name='ghi_chu']"),
+        caUaThich: form.querySelector("select[name='ca_ua_thich']"),
+        caTranh: form.querySelector("select[name='ca_tranh']"),
+        chiNhanh: form.querySelector("select[name='chi_nhanh']"),
+        trongSo1Id: form.querySelector("select[name='trong_so_1_id']"),
+        trongSo2Id: form.querySelector("select[name='trong_so_2_id']"),
+        trongSo3Id: form.querySelector("select[name='trong_so_3_id']"),
+      }
+
+      const setMultiSelect = (element, values) => {
+        if (!element) return
+        const chosen = new Set(values)
+        Array.from(element.options).forEach(option => {
+          option.selected = chosen.has(option.value)
+        })
+      }
+
+      const weightSelects = {
+        trong_so_1: form.querySelector("select[name='trong_so_1_id']"),
+        trong_so_2: form.querySelector("select[name='trong_so_2_id']"),
+        trong_so_3: form.querySelector("select[name='trong_so_3_id']"),
+      }
+
+      const renderWeightLabels = () => {
+        document.querySelectorAll(".goi-y[data-weight-label]").forEach(holder => {
+          const key = holder.dataset.weightLabel
+          const selectEl = weightSelects[key]
+          if (!selectEl || !selectEl.value) {
+            holder.textContent = ""
+            return
+          }
+          const option = selectEl.options[selectEl.selectedIndex]
+          const text = option ? option.textContent || "" : ""
+          const match = text.match(/\((\d+)\)\s*$/)
+          const level = match ? match[1] : ""
+          const badgeClass = level ? `badge badge-${level}` : "badge"
+          holder.innerHTML = `<span class="${badgeClass}">Mức ${level || "?"}</span>`
+        })
+      }
+
+      const fillForm = () => {
+        const option = select.options[select.selectedIndex]
+        if (!option) return
+        if (fields.maNv) fields.maNv.value = option.dataset.maNv || ""
+        if (fields.tenNv) fields.tenNv.value = option.dataset.tenNv || ""
+        if (fields.vaiTro) fields.vaiTro.value = option.dataset.vaiTro || ""
+        if (fields.capDo) fields.capDo.value = option.dataset.capDo || ""
+        if (fields.mucUuTien) fields.mucUuTien.value = option.dataset.mucUuTien || ""
+        if (fields.gioToiDa) fields.gioToiDa.value = option.dataset.gioToiDaTuan || ""
+        if (fields.ghiChu) fields.ghiChu.value = option.dataset.ghiChu || ""
+        setMultiSelect(fields.caUaThich, (option.dataset.caUaThich || "").split(",").filter(Boolean))
+        setMultiSelect(fields.caTranh, (option.dataset.caTranh || "").split(",").filter(Boolean))
+        setMultiSelect(fields.chiNhanh, (option.dataset.chiNhanh || "").split(",").filter(Boolean))
+        const trongSoRaw = (option.dataset.trongSo || "").split(",").filter(Boolean)
+        const pick = (idx, selectEl) => {
+          if (!selectEl) return
+          selectEl.value = trongSoRaw[idx] || ""
+        }
+        pick(0, fields.trongSo1Id)
+        pick(1, fields.trongSo2Id)
+        pick(2, fields.trongSo3Id)
+        renderWeightLabels()
+      }
+
+      select.addEventListener("change", fillForm)
+      form.querySelectorAll("select[name^='trong_so_']").forEach(selectEl => {
+        selectEl.addEventListener("change", () => {
+          renderWeightLabels()
+        })
+      })
+      fillForm()
+    })
+  </script>
+{% endblock %}

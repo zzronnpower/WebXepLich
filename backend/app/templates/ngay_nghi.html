@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block noi_dung %}
+  <section class="khung">
+    <div class="tieu-de-hang">
+      <h2>Ngày nghỉ</h2>
+    </div>
+    <div class="luoi-2">
+      <form class="the" action="/ngay-nghi" method="post">
+        <h3>Thêm ngày nghỉ</h3>
+        <label>Nhân viên</label>
+        <select name="nhan_vien_id" required>
+          {% for nv in ds_nhan_vien %}
+            <option value="{{ nv.id }}">{{ nv.ten_nv }}</option>
+          {% endfor %}
+        </select>
+        <label>Ngày</label>
+        <input type="date" name="ngay" required />
+        <label>Trạng thái</label>
+        <input name="trang_thai" value="OFF" />
+        <label>Ghi chú</label>
+        <textarea name="ghi_chu"></textarea>
+        <button class="nut-chinh" type="submit">Thêm</button>
+      </form>
+      <div class="the">
+        <h3>Danh sách</h3>
+        <table class="bang-nho">
+          <thead>
+            <tr>
+              <th>Nhân viên</th>
+              <th>Ngày</th>
+              <th>Trạng thái</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for nn in ds_ngay_nghi %}
+              <tr>
+                <td>{{ nn.nhan_vien.ten_nv }}</td>
+                <td>{{ nn.ngay }}</td>
+                <td>{{ nn.trang_thai }}</td>
+                <td>
+                  <form action="/ngay-nghi/{{ nn.id }}/xoa" method="post">
+                    <button class="nut-phu" type="submit">Xóa</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+{% endblock %}
