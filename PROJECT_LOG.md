@@ -50,6 +50,10 @@
 - Added OFF auto-fill for unassigned staff after scheduling and integrated OFF day input + sorting UI.
 - Enforced default demands for 9h-20h and 10h-21h shifts at 326TTV and 197LT5 when missing.
 - Aligned OFF overview columns with schedule table and added week-only OFF list layout.
+- Added logo header for Phòng Khám Thú Y Cún Miu and tightened header spacing.
+- Added "Top" (7) weight level, restored per-row edits on /trong-so, and locked edits in /quan-ly.
+- Added "Không đi chích ngoài" soft penalty and auto-ensure weight in DB on startup.
+- Enhanced staff screens with multi-select toggles and visible lists for preferred/avoid shifts and branches.
 
 ## Current State
 

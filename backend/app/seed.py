@@ -147,6 +147,7 @@ def tao_du_lieu_mau(phien: Session):
     phien.add(models.TrongSoUuTien(khoa="phat_ca_tranh", gia_tri=6))
     phien.add(models.TrongSoUuTien(khoa="cong_bang_chich_ngoai", gia_tri=5))
     phien.add(models.TrongSoUuTien(khoa="cong_bang_cuoi_tuan", gia_tri=4))
+    phien.add(models.TrongSoUuTien(khoa="khong_di_chich_ngoai", gia_tri=6))
     phien.add(models.TrongSoUuTien(khoa="uu_tien_ca_quan_trong", gia_tri=3))
     phien.add(models.TrongSoUuTien(khoa="han_che_ca_muon_sang", gia_tri=2))
     phien.add(models.TrongSoUuTien(khoa="bat_buoc_chich_ngoai", gia_tri=1))

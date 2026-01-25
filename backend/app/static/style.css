@@ -34,7 +34,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 8%;
+  padding: 2px 8% 2px;
   background: rgba(8, 8, 16, 0.7);
   border-bottom: 1px solid var(--vien);
   backdrop-filter: blur(12px);
@@ -44,8 +44,52 @@ body {
 }
 
 .logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   font-weight: 700;
   letter-spacing: 0.5px;
+}
+
+.logo-doc {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  margin-top: -35px;
+}
+
+.logo-mark {
+  position: relative;
+  width: 119px;
+  height: 119px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-mark::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  background: url("/static/logo.png") center / contain no-repeat;
+  filter: blur(10px);
+  opacity: 0.35;
+}
+
+.logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+}
+
+.logo-text {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  margin-top: -35px;
+  line-height: 1;
 }
 
 .thanh-dieu-huong nav a {
@@ -187,6 +231,11 @@ select option {
   color: #f7f7ff;
 }
 
+select[multiple] option:checked {
+  background: rgba(0, 210, 255, 0.35);
+  color: #f7f7ff;
+}
+
 textarea {
   min-height: 90px;
   resize: vertical;
@@ -263,6 +312,11 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.tieu-de-hang .nut-phu,
+.tieu-de-hang #luu-keo-tha {
+  transform: translateY(-5px);
 }
 
 .bang-lich {

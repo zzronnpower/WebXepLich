@@ -32,6 +32,7 @@ def lay_trong_so(phien: Session) -> dict[str, int]:
         "phat_ca_tranh": 6,
         "cong_bang_chich_ngoai": 5,
         "cong_bang_cuoi_tuan": 4,
+        "khong_di_chich_ngoai": 6,
         "uu_tien_ca_quan_trong": 3,
         "han_che_ca_muon_sang": 2,
         "bat_buoc_chich_ngoai": 1,
@@ -305,6 +306,10 @@ def giai_lich_tuan(
             if nc["ca_id"] in ca_tranh:
                 trong = trong_so.get("phat_ca_tranh", 6) * he_so_nv.get("phat_ca_tranh", 1)
                 diem.append(bien * (-trong))
+            if nc["la_chich_ngoai"]:
+                trong = trong_so.get("khong_di_chich_ngoai", 6) * he_so_nv.get("khong_di_chich_ngoai", 1)
+                if trong > 0:
+                    diem.append(bien * (-trong))
             if nc["do_quan_trong"] > 0:
                 trong = trong_so.get("uu_tien_ca_quan_trong", 3) * he_so_nv.get("uu_tien_ca_quan_trong", 1)
                 diem.append(bien * (uu_tien_nv * trong))

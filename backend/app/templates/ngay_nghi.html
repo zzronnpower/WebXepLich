@@ -3,6 +3,10 @@
   <section class="khung">
     <div class="tieu-de-hang">
       <h2>Ngày nghỉ</h2>
+      <form action="/ngay-nghi/xoa-tat-ca" method="post" id="xoa-tat-ca-ngay-nghi">
+        <input type="hidden" name="redirect_to" value="{{ request.url.path }}" />
+        <button class="nut-phu" type="submit">Xóa tất cả</button>
+      </form>
     </div>
     <div class="luoi-2">
       <form class="the" action="/ngay-nghi" method="post">
@@ -50,4 +54,16 @@
       </div>
     </div>
   </section>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const xoaForm = document.getElementById("xoa-tat-ca-ngay-nghi")
+      if (!xoaForm) return
+      xoaForm.addEventListener("submit", event => {
+        const ok = window.confirm("Xóa toàn bộ ngày nghỉ đã nhập? Hành động này không thể hoàn tác.")
+        if (!ok) {
+          event.preventDefault()
+        }
+      })
+    })
+  </script>
 {% endblock %}

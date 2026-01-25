@@ -64,7 +64,9 @@
           <select name="trong_so_1_id">
             <option value="">Không chọn</option>
             {% for ts in ds_trong_so %}
-              <option value="{{ ts.id }}">{{ ten_trong_so_hien_thi(ts.khoa) }} ({{ ts.gia_tri }})</option>
+                <option value="{{ ts.id }}">
+                  {{ ten_trong_so_hien_thi(ts.khoa) }} ({{ "Top" if ts.gia_tri == 7 else ts.gia_tri }})
+                </option>
             {% endfor %}
           </select>
           <div class="goi-y" data-weight-label="trong_so_1"></div>
@@ -74,7 +76,9 @@
           <select name="trong_so_2_id">
             <option value="">Không chọn</option>
             {% for ts in ds_trong_so %}
-              <option value="{{ ts.id }}">{{ ten_trong_so_hien_thi(ts.khoa) }} ({{ ts.gia_tri }})</option>
+                <option value="{{ ts.id }}">
+                  {{ ten_trong_so_hien_thi(ts.khoa) }} ({{ "Top" if ts.gia_tri == 7 else ts.gia_tri }})
+                </option>
             {% endfor %}
           </select>
           <div class="goi-y" data-weight-label="trong_so_2"></div>
@@ -84,7 +88,9 @@
           <select name="trong_so_3_id">
             <option value="">Không chọn</option>
             {% for ts in ds_trong_so %}
-              <option value="{{ ts.id }}">{{ ten_trong_so_hien_thi(ts.khoa) }} ({{ ts.gia_tri }})</option>
+                <option value="{{ ts.id }}">
+                  {{ ten_trong_so_hien_thi(ts.khoa) }} ({{ "Top" if ts.gia_tri == 7 else ts.gia_tri }})
+                </option>
             {% endfor %}
           </select>
           <div class="goi-y" data-weight-label="trong_so_3"></div>
@@ -130,6 +136,9 @@
               <th>Vai trò</th>
               <th>Cấp độ</th>
               <th>Ưu tiên</th>
+              <th>Ca ưa thích</th>
+              <th>Ca tránh</th>
+              <th>Chi nhánh</th>
               <th>Trọng số cá nhân</th>
               <th></th>
             </tr>
@@ -143,9 +152,33 @@
                 <td>{{ nv.cap_do or "-" }}</td>
                 <td>{{ nv.muc_uu_tien }}</td>
                 <td>
+                  {% if nv.ca_ua_thich %}
+                    {% for ca in nv.ca_ua_thich %}{{ ca.ten_ca }}{% if not loop.last %}, {% endif %}{% endfor %}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
+                  {% if nv.ca_tranh %}
+                    {% for ca in nv.ca_tranh %}{{ ca.ten_ca }}{% if not loop.last %}, {% endif %}{% endfor %}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
+                  {% if nv.chi_nhanh %}
+                    {% for cn in nv.chi_nhanh %}{{ cn.ten_chi_nhanh }}{% if not loop.last %}, {% endif %}{% endfor %}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
                   {% if nv.trong_so_uu_tien %}
                     {% for ts in nv.trong_so_uu_tien %}
-                      <div>{{ ten_trong_so_hien_thi(ts.trong_so.khoa) }} ({{ ts.trong_so.gia_tri }})</div>
+                      <div>
+                        {{ ten_trong_so_hien_thi(ts.trong_so.khoa) }}
+                        ({{ "Top" if ts.trong_so.gia_tri == 7 else ts.trong_so.gia_tri }})
+                      </div>
                     {% endfor %}
                   {% else %}
                     -
@@ -240,6 +273,19 @@
       }
 
       select.addEventListener("change", fillForm)
+      const enableMultiClick = element => {
+        if (!element) return
+        element.addEventListener("mousedown", event => {
+          const option = event.target
+          if (option.tagName !== "OPTION") return
+          event.preventDefault()
+          option.selected = !option.selected
+          element.dispatchEvent(new Event("input", { bubbles: true }))
+          element.dispatchEvent(new Event("change", { bubbles: true }))
+          element.focus()
+        })
+      }
+      document.querySelectorAll("select[multiple]").forEach(enableMultiClick)
       form.querySelectorAll("select[name^='trong_so_']").forEach(selectEl => {
         selectEl.addEventListener("change", () => {
           renderWeightLabels()

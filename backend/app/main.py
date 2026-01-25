@@ -36,6 +36,7 @@ def khoi_tao():
             with next(lay_phien_lam_viec()) as phien:
                 tao_du_lieu_mau(phien)
                 cap_nhat_nhom_off(phien)
+                dam_bao_trong_so(phien)
             return
         except Exception:
             time.sleep(1)
@@ -43,6 +44,7 @@ def khoi_tao():
     with next(lay_phien_lam_viec()) as phien:
         tao_du_lieu_mau(phien)
         cap_nhat_nhom_off(phien)
+        dam_bao_trong_so(phien)
 
 
 def ten_thu(ngay: date) -> str:
@@ -64,6 +66,7 @@ def ten_trong_so_hien_thi(khoa: str) -> str:
         "phat_ca_tranh": "Phạt ca tránh",
         "cong_bang_chich_ngoai": "Công bằng chích ngoài",
         "cong_bang_cuoi_tuan": "Công bằng cuối tuần",
+        "khong_di_chich_ngoai": "Không đi chích ngoài",
         "uu_tien_ca_quan_trong": "Ưu tiên ca quan trọng",
         "han_che_ca_muon_sang": "Hạn chế ca muộn/sáng",
         "bat_buoc_chich_ngoai": "Bắt buộc chích ngoài",
@@ -123,6 +126,27 @@ def cap_nhat_nhom_off(phien: Session):
     if nhom_off:
         phien.query(models.MappingNhom).filter(models.MappingNhom.nhom_hien_thi_id == nhom_off.id).delete()
         phien.commit()
+
+
+def dam_bao_trong_so(phien: Session):
+    crud.tao_hoac_cap_nhat_trong_so(phien, "khong_di_chich_ngoai", 6)
+
+
+def tai_du_lieu_ngay_nghi(phien: Session, ngay_bat_dau: date) -> tuple[list[date], dict[date, list[models.NgayNghi]]]:
+    ngay_bat_dau = ngay_bat_dau - timedelta(days=ngay_bat_dau.weekday())
+    ngay_list_nghi = danh_sach_ngay_trong_tuan(ngay_bat_dau)
+    ds_ngay_nghi = (
+        phien.query(models.NgayNghi)
+        .filter(models.NgayNghi.ngay >= ngay_list_nghi[0])
+        .filter(models.NgayNghi.ngay <= ngay_list_nghi[-1])
+        .order_by(models.NgayNghi.ngay.asc())
+        .all()
+    )
+    ngay_nghi_theo_ngay = {ngay: [] for ngay in ngay_list_nghi}
+    for nn in ds_ngay_nghi:
+        if nn.ngay in ngay_nghi_theo_ngay:
+            ngay_nghi_theo_ngay[nn.ngay].append(nn)
+    return ngay_list_nghi, ngay_nghi_theo_ngay
 
 
 def lay_lich_hien_thi(phien: Session, lich_tuan_id: int | None):
@@ -274,25 +298,19 @@ def thong_ke_phan_cong(phien: Session, phan_cong: list[dict]) -> dict[str, int]:
 def trang_chu(
     request: Request,
     lich_tuan_id: int | None = None,
+    ngay_bat_dau: date | None = None,
     sap_xep: str | None = None,
     phien: Session = Depends(lay_phien_lam_viec),
 ):
     du_lieu_lich = lay_lich_hien_thi(phien, lich_tuan_id)
-    ngay_mac_dinh = du_lieu_lich["lich_tuan"].ngay_bat_dau if du_lieu_lich else date.today()
+    if du_lieu_lich:
+        ngay_mac_dinh = du_lieu_lich["lich_tuan"].ngay_bat_dau
+    elif ngay_bat_dau:
+        ngay_mac_dinh = ngay_bat_dau
+    else:
+        ngay_mac_dinh = date.today()
     ds_nhan_vien = phien.query(models.NhanVien).order_by(models.NhanVien.ten_nv).all()
-    ngay_bat_dau = ngay_mac_dinh - timedelta(days=ngay_mac_dinh.weekday())
-    ngay_list_nghi = danh_sach_ngay_trong_tuan(ngay_bat_dau)
-    ds_ngay_nghi = (
-        phien.query(models.NgayNghi)
-        .filter(models.NgayNghi.ngay >= ngay_list_nghi[0])
-        .filter(models.NgayNghi.ngay <= ngay_list_nghi[-1])
-        .order_by(models.NgayNghi.ngay.asc())
-        .all()
-    )
-    ngay_nghi_theo_ngay = {ngay: [] for ngay in ngay_list_nghi}
-    for nn in ds_ngay_nghi:
-        if nn.ngay in ngay_nghi_theo_ngay:
-            ngay_nghi_theo_ngay[nn.ngay].append(nn)
+    ngay_list_nghi, ngay_nghi_theo_ngay = tai_du_lieu_ngay_nghi(phien, ngay_mac_dinh)
     return giao_dien.TemplateResponse(
         "index.html",
         {
@@ -303,7 +321,6 @@ def trang_chu(
             "ten_nhom_hien_thi": ten_nhom_hien_thi,
             "ngay_mac_dinh": ngay_mac_dinh,
             "ds_nhan_vien": ds_nhan_vien,
-            "ds_ngay_nghi": ds_ngay_nghi,
             "ngay_list_nghi": ngay_list_nghi,
             "ngay_nghi_theo_ngay": ngay_nghi_theo_ngay,
         },
@@ -517,6 +534,7 @@ def xep_lich(
     ngay_bat_dau = ngay_bat_dau - timedelta(days=ngay_bat_dau.weekday())
     ket_qua = giai_lich_tuan(phien, ngay_bat_dau)
     if not ket_qua.thanh_cong:
+        ngay_list_nghi, ngay_nghi_theo_ngay = tai_du_lieu_ngay_nghi(phien, ngay_bat_dau)
         return giao_dien.TemplateResponse(
             "index.html",
             {
@@ -529,9 +547,8 @@ def xep_lich(
                 "ten_nhom_hien_thi": ten_nhom_hien_thi,
                 "ngay_mac_dinh": ngay_bat_dau,
                 "ds_nhan_vien": phien.query(models.NhanVien).order_by(models.NhanVien.ten_nv).all(),
-                "ds_ngay_nghi": phien.query(models.NgayNghi).order_by(models.NgayNghi.ngay.desc()).all(),
-                "ngay_list_nghi": danh_sach_ngay_trong_tuan(ngay_bat_dau),
-                "ngay_nghi_theo_ngay": {},
+                "ngay_list_nghi": ngay_list_nghi,
+                "ngay_nghi_theo_ngay": ngay_nghi_theo_ngay,
             },
         )
     return RedirectResponse(url=f"/?lich_tuan_id={ket_qua.lich_tuan_id}", status_code=303)
@@ -735,6 +752,7 @@ async def tao_ngay_nghi_nhieu(request: Request, phien: Session = Depends(lay_phi
             ngay_hop_le.append(datetime.fromisoformat(raw).date())
         except ValueError:
             du_lieu_lich = lay_lich_hien_thi(phien, None)
+            ngay_list_nghi, ngay_nghi_theo_ngay = tai_du_lieu_ngay_nghi(phien, date.today())
             return giao_dien.TemplateResponse(
                 "index.html",
                 {
@@ -745,13 +763,14 @@ async def tao_ngay_nghi_nhieu(request: Request, phien: Session = Depends(lay_phi
                     "ten_nhom_hien_thi": ten_nhom_hien_thi,
                     "ngay_mac_dinh": date.today(),
                     "ds_nhan_vien": phien.query(models.NhanVien).order_by(models.NhanVien.ten_nv).all(),
-                    "ds_ngay_nghi": phien.query(models.NgayNghi).order_by(models.NgayNghi.ngay.desc()).all(),
-                    "sap_xep_ngay_nghi": "ngay_moi",
+                    "ngay_list_nghi": ngay_list_nghi,
+                    "ngay_nghi_theo_ngay": ngay_nghi_theo_ngay,
                     "loi_ngay_nghi": f"Ngày nghỉ không hợp lệ: {raw}.",
                 },
             )
     if not ngay_hop_le:
         du_lieu_lich = lay_lich_hien_thi(phien, None)
+        ngay_list_nghi, ngay_nghi_theo_ngay = tai_du_lieu_ngay_nghi(phien, date.today())
         return giao_dien.TemplateResponse(
             "index.html",
             {
@@ -762,8 +781,8 @@ async def tao_ngay_nghi_nhieu(request: Request, phien: Session = Depends(lay_phi
                 "ten_nhom_hien_thi": ten_nhom_hien_thi,
                 "ngay_mac_dinh": date.today(),
                 "ds_nhan_vien": phien.query(models.NhanVien).order_by(models.NhanVien.ten_nv).all(),
-                "ds_ngay_nghi": phien.query(models.NgayNghi).order_by(models.NgayNghi.ngay.desc()).all(),
-                "sap_xep_ngay_nghi": "ngay_moi",
+                "ngay_list_nghi": ngay_list_nghi,
+                "ngay_nghi_theo_ngay": ngay_nghi_theo_ngay,
                 "loi_ngay_nghi": "Chưa chọn ngày nghỉ.",
             },
         )
@@ -781,7 +800,8 @@ async def tao_ngay_nghi_nhieu(request: Request, phien: Session = Depends(lay_phi
             continue
         phien.add(models.NgayNghi(nhan_vien_id=nv_id, ngay=ngay, trang_thai="OFF", ghi_chu=None))
     phien.commit()
-    return RedirectResponse(url="/", status_code=303)
+    tuan = ngay_set[0] - timedelta(days=ngay_set[0].weekday())
+    return RedirectResponse(url=f"/?ngay_bat_dau={tuan.isoformat()}", status_code=303)
 
 
 @ung_dung.post("/ngay-nghi/{ngay_nghi_id}/xoa")
