@@ -73,7 +73,7 @@ def tao_du_lieu_mau(phien: Session):
         models.NhomHienThi(ten_nhom="197LT5", mau_nen="#d9f7e6"),
         models.NhomHienThi(ten_nhom="796ADV", mau_nen="#fff1c9"),
         models.NhomHienThi(ten_nhom="CN", mau_nen="#ffd8e6"),
-        models.NhomHienThi(ten_nhom="Spa", mau_nen="#e6e6e6"),
+        models.NhomHienThi(ten_nhom="OFF", mau_nen="#e6e6e6"),
     ]
     phien.add_all(nhom)
     phien.flush()
@@ -98,8 +98,6 @@ def tao_du_lieu_mau(phien: Session):
             map_nhom(cn796.id, ca.id, nhom[2])
         if ca.ten_ca in {"9h-20h"}:
             map_nhom(None, ca.id, nhom[3])
-        if ca.ten_ca in {"8h30-19h"}:
-            map_nhom(None, ca.id, nhom[4])
 
     thu_hai = lay_thu_hai_tuan_nay()
     for i in range(7):

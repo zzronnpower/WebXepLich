@@ -212,6 +212,52 @@ textarea {
   text-decoration: none;
 }
 
+#luu-keo-tha {
+  background: #3ad27a;
+  border-color: rgba(58, 210, 122, 0.6);
+  color: #0b111f;
+  font-weight: 700;
+  padding: 15px 30px;
+  font-size: 1.05em;
+}
+
+.nut-nho {
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.hang-xoa-nho {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+
+.hang-xoa-nho form {
+  margin: 0;
+  display: inline-flex;
+}
+
+.bang-nghi tbody td,
+.bang-nghi tbody td * {
+  color: var(--chu) !important;
+  opacity: 1;
+}
+
+.bang-nghi .hang-xoa-nho span {
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.bang-nghi .nut-nho {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--nhan);
+}
+
 .tieu-de-hang {
   display: flex;
   align-items: center;
@@ -232,6 +278,22 @@ table {
 
 .bang-lich table {
   min-width: 960px;
+  table-layout: fixed;
+}
+
+.bang-lich table th:first-child,
+.bang-lich table td:first-child {
+  width: 170px;
+  min-width: 170px;
+}
+
+.bang-nghi {
+  table-layout: fixed;
+}
+
+.bang-nghi .cot-nhom {
+  width: 170px;
+  min-width: 170px;
 }
 
 th,

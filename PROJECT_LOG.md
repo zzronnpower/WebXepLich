@@ -45,6 +45,11 @@
 - Constraint check now includes chích ngoài demand when saving drag-and-drop.
 - Drag-and-drop saving now reports connection errors and prevents text selection.
 - Saving drag-and-drop now returns structured errors instead of fetch failures.
+- Release v1.0.0 created: version đầu tiên chạy stable ngày 25/01/2026.
+- Renamed Spa group to OFF (Ngày nghỉ) and auto-migrate existing data on startup.
+- Added OFF auto-fill for unassigned staff after scheduling and integrated OFF day input + sorting UI.
+- Enforced default demands for 9h-20h and 10h-21h shifts at 326TTV and 197LT5 when missing.
+- Aligned OFF overview columns with schedule table and added week-only OFF list layout.
 
 ## Current State
 

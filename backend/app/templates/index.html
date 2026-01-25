@@ -12,6 +12,24 @@
       </div>
       <button class="nut-chinh" type="submit">XẾP LỊCH</button>
     </form>
+    <form class="form-hang" action="/ngay-nghi/nhieu" method="post" id="form-ngay-nghi">
+      <div class="truong">
+        <label>Nhân viên nghỉ</label>
+        <select name="nhan_vien_id" required>
+          {% for nv in ds_nhan_vien %}
+            <option value="{{ nv.id }}">{{ nv.ma_nv }} - {{ nv.ten_nv }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="truong">
+        <label>Ngày nghỉ (có thể thêm nhiều ngày)</label>
+        <div class="nhom-ngay-nghi">
+          <input type="date" name="ngay_list" required />
+        </div>
+      </div>
+      <button class="nut-phu" type="button" id="them-ngay-nghi">+ Thêm ngày</button>
+      <button class="nut-chinh" type="submit">Lưu ngày nghỉ</button>
+    </form>
     {% if loi %}
       <div class="canh-bao">
         <strong>{{ loi }}</strong>
@@ -23,6 +41,55 @@
           </ul>
         {% endif %}
       </div>
+    {% endif %}
+    {% if loi_ngay_nghi %}
+      <div class="canh-bao">
+        <strong>{{ loi_ngay_nghi }}</strong>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="khung">
+    <div class="tieu-de-hang">
+      <h2>Ngày nghỉ đã nhập</h2>
+      <form action="/ngay-nghi/xoa-tat-ca" method="post" id="xoa-tat-ca-ngay-nghi">
+        <input type="hidden" name="redirect_to" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}" />
+        <button class="nut-phu" type="submit">Xóa tất cả</button>
+      </form>
+    </div>
+    {% if ngay_list_nghi %}
+      <div class="bang-lich">
+        <table class="bang-nghi">
+          <thead>
+            <tr>
+              <th class="cot-nhom"></th>
+              {% for ngay in ngay_list_nghi %}
+                <th>{{ ten_thu(ngay) }} {{ ngay.strftime('%d/%m/%y') }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="cot-nhom"></td>
+              {% for ngay in ngay_list_nghi %}
+                <td>
+                  {% for nn in ngay_nghi_theo_ngay.get(ngay, []) %}
+                    <div class="hang-xoa-nho">
+                      <span class="ten-nghi">{{ nn.nhan_vien.ten_nv }}</span>
+                      <form action="/ngay-nghi/{{ nn.id }}/xoa" method="post">
+                        <input type="hidden" name="redirect_to" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}" />
+                        <button class="nut-phu nut-nho" type="submit">Xóa</button>
+                      </form>
+                    </div>
+                  {% endfor %}
+                </td>
+              {% endfor %}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>Chưa có ngày nghỉ được nhập.</p>
     {% endif %}
   </section>
 
@@ -160,6 +227,9 @@
                   thongBao.style.background = "rgba(94, 255, 180, 0.18)"
                   thongBao.style.borderColor = "rgba(94, 255, 180, 0.6)"
                 }
+                setTimeout(() => {
+                  window.location.reload()
+                }, 300)
               } else {
                 thongBao.textContent = data.message || "Không thể lưu kéo thả."
                 thongBao.style.background = "rgba(255, 104, 104, 0.2)"
@@ -178,4 +248,40 @@
       })
     </script>
   {% endif %}
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const addBtn = document.getElementById("them-ngay-nghi")
+      const container = document.querySelector("#form-ngay-nghi .nhom-ngay-nghi")
+      if (!addBtn || !container) return
+      addBtn.addEventListener("click", () => {
+        const input = document.createElement("input")
+        input.type = "date"
+        input.name = "ngay_list"
+        container.appendChild(input)
+      })
+
+      const xoaForm = document.getElementById("xoa-tat-ca-ngay-nghi")
+      if (!xoaForm) return
+      xoaForm.addEventListener("submit", async event => {
+        event.preventDefault()
+        const ok = window.confirm("Xóa toàn bộ ngày nghỉ đã nhập? Hành động này không thể hoàn tác.")
+        if (!ok) return
+        try {
+          const res = await fetch(xoaForm.action, {
+            method: "POST",
+            body: new FormData(xoaForm),
+          })
+          if (!res.ok) {
+            window.alert("Không thể xóa toàn bộ ngày nghỉ.")
+            return
+          }
+          const redirectInput = xoaForm.querySelector("input[name='redirect_to']")
+          const target = redirectInput?.value || window.location.pathname + window.location.search
+          window.location.assign(target)
+        } catch (error) {
+          window.alert("Không thể xóa toàn bộ ngày nghỉ.")
+        }
+      })
+    })
+  </script>
 {% endblock %}

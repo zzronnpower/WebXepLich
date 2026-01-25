@@ -112,6 +112,65 @@ def tao_nhu_cau_mac_dinh(phien: Session, ngay_bat_dau: date) -> list[models.NhuC
     return nhu_cau_moi
 
 
+def bo_sung_nhu_cau_bat_buoc(
+    phien: Session,
+    nhu_cau: list[models.NhuCauCa],
+    ngay_list: list[date],
+    luu_db: bool,
+) -> list[models.NhuCauCa]:
+    ca_8_19 = phien.query(models.CaLam).filter(models.CaLam.ten_ca == "8h-19h").first()
+    ca_8_30_19_30 = (
+        phien.query(models.CaLam).filter(models.CaLam.ten_ca == "8h30-19h30").first()
+    )
+    ca_9_20 = phien.query(models.CaLam).filter(models.CaLam.ten_ca == "9h-20h").first()
+    ca_10_21 = phien.query(models.CaLam).filter(models.CaLam.ten_ca == "10h-21h").first()
+    if not ca_9_20 or not ca_10_21:
+        return []
+    chi_nhanh_list = (
+        phien.query(models.ChiNhanh)
+        .filter(models.ChiNhanh.ten_chi_nhanh.in_(["326TTV", "197LT5"]))
+        .all()
+    )
+    if not chi_nhanh_list:
+        return []
+    da_co = {(nc.ngay, nc.chi_nhanh_id, nc.ca_id) for nc in nhu_cau}
+    can_them = []
+    can_cap_nhat = []
+    for cn in chi_nhanh_list:
+        ca_bat_buoc = [ca_9_20, ca_10_21]
+        if cn.ten_chi_nhanh == "197LT5" and ca_8_19:
+            ca_bat_buoc = [ca_8_19, ca_9_20, ca_10_21]
+        if cn.ten_chi_nhanh == "326TTV" and ca_8_19:
+            ca_bat_buoc = [ca_8_19, ca_9_20, ca_10_21]
+            if ca_8_30_19_30:
+                ca_bat_buoc = [ca_8_19, ca_8_30_19_30, ca_9_20, ca_10_21]
+        for ca in ca_bat_buoc:
+            for ngay in ngay_list:
+                key = (ngay, cn.id, ca.id)
+                if key in da_co:
+                    for nc in nhu_cau:
+                        if (nc.ngay, nc.chi_nhanh_id, nc.ca_id) == key and nc.so_nguoi_can < 1:
+                            nc.so_nguoi_can = 1
+                            can_cap_nhat.append(nc)
+                    continue
+                moi = models.NhuCauCa(
+                    ngay=ngay,
+                    chi_nhanh_id=cn.id,
+                    ca_id=ca.id,
+                    so_nguoi_can=1,
+                    vai_tro_yeu_cau_id=None,
+                    do_quan_trong=3,
+                    senior_toi_thieu=None,
+                )
+                can_them.append(moi)
+                da_co.add(key)
+    if luu_db and can_them:
+        phien.add_all(can_them)
+    if luu_db and can_cap_nhat:
+        phien.flush()
+    return can_them
+
+
 def giai_lich_tuan(
     phien: Session,
     ngay_bat_dau: date,
@@ -126,7 +185,7 @@ def giai_lich_tuan(
 
     nhan_vien_list = phien.query(models.NhanVien).all()
     if not nhan_vien_list:
-        return KetQuaLich(False, "Khong co nhan vien", None, [])
+        return KetQuaLich(False, "Không có nhân viên", None, [])
 
     ca_list = {ca.id: ca for ca in phien.query(models.CaLam).all()}
     nhu_cau = (
@@ -137,6 +196,7 @@ def giai_lich_tuan(
     )
     if not nhu_cau:
         nhu_cau = tao_nhu_cau_mac_dinh(phien, ngay_bat_dau)
+    nhu_cau += bo_sung_nhu_cau_bat_buoc(phien, nhu_cau, danh_sach_ngay, luu_db)
 
     bat_buoc_chich_ngoai = trong_so.get("bat_buoc_chich_ngoai", 1) > 0
     nhu_cau_chich_ngoai = tao_nhu_cau_chich_ngoai(phien, danh_sach_ngay) if bat_buoc_chich_ngoai else []
@@ -178,10 +238,10 @@ def giai_lich_tuan(
             hop_le += 1
         if hop_le < nc["so_nguoi_can"]:
             thieu_nhu_cau.append(
-                f"Thieu {nc['so_nguoi_can'] - hop_le} nguoi: {nc['ngay']} ca {nc['ten_ca']}"
+                f"Thiếu {nc['so_nguoi_can'] - hop_le} người: {nc['ngay']} ca {nc['ten_ca']}"
             )
     if thieu_nhu_cau:
-        return KetQuaLich(False, "Khong du nhan su", None, thieu_nhu_cau)
+        return KetQuaLich(False, "Không đủ nhân sự", None, thieu_nhu_cau)
 
     mo_hinh = cp_model.CpModel()
     bien_x = {}
@@ -303,7 +363,7 @@ def giai_lich_tuan(
     giai.parameters.max_time_in_seconds = 15
     ket_qua = giai.Solve(mo_hinh)
     if ket_qua not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        return KetQuaLich(False, "Khong tim duoc lich hop le", None, [])
+        return KetQuaLich(False, "Không tìm được lịch hợp lệ", None, [])
     diem_toi_uu = int(giai.ObjectiveValue())
 
     lich_tuan = None
@@ -347,11 +407,70 @@ def giai_lich_tuan(
                     )
                     phien.add(chi_tiet)
     if luu_db and lich_tuan:
+        nhom_off = (
+            phien.query(models.NhomHienThi)
+            .filter(models.NhomHienThi.ten_nhom == "OFF")
+            .first()
+        )
+        if nhom_off:
+            ngay_nghi = (
+                phien.query(models.NgayNghi)
+                .filter(models.NgayNghi.ngay >= danh_sach_ngay[0])
+                .filter(models.NgayNghi.ngay <= danh_sach_ngay[-1])
+                .all()
+            )
+            da_xep = {(pc["nhan_vien_id"], pc["ngay"]) for pc in phan_cong}
+            off_set = set()
+            for nn in ngay_nghi:
+                key = (nn.nhan_vien_id, nn.ngay)
+                if key in da_xep:
+                    continue
+                off_set.add(key)
+                phien.add(
+                    models.LichChiTiet(
+                        lich_tuan_id=lich_tuan.id,
+                        ngay=nn.ngay,
+                        chi_nhanh_id=None,
+                        ca_id=None,
+                        nhan_vien_id=nn.nhan_vien_id,
+                        nhom_hien_thi_id=nhom_off.id,
+                    )
+                )
+            for nv in nhan_vien_list:
+                for ngay in danh_sach_ngay:
+                    key = (nv.id, ngay)
+                    if key in da_xep or key in off_set:
+                        continue
+                    ton_tai_off = (
+                        phien.query(models.NgayNghi)
+                        .filter(models.NgayNghi.nhan_vien_id == nv.id)
+                        .filter(models.NgayNghi.ngay == ngay)
+                        .first()
+                    )
+                    if not ton_tai_off:
+                        phien.add(
+                            models.NgayNghi(
+                                nhan_vien_id=nv.id,
+                                ngay=ngay,
+                                trang_thai="OFF",
+                                ghi_chu="Tu dong tu lich",
+                            )
+                        )
+                    phien.add(
+                        models.LichChiTiet(
+                            lich_tuan_id=lich_tuan.id,
+                            ngay=ngay,
+                            chi_nhanh_id=None,
+                            ca_id=None,
+                            nhan_vien_id=nv.id,
+                            nhom_hien_thi_id=nhom_off.id,
+                        )
+                    )
         phien.commit()
 
     return KetQuaLich(
         True,
-        "Da xep lich",
+        "Đã xếp lịch",
         lich_tuan.id if lich_tuan else None,
         [],
         diem_toi_uu=diem_toi_uu,
