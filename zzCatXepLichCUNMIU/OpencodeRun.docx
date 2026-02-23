@@ -1,0 +1,168 @@
+Bạn là lập trình viên full-stack senior. Hãy xây dựng phần mềm web chạy trên server để xếp lịch làm việc nhân viên theo tuần và hiển thị lịch trên website. Mọi tên file, tên bảng, tên cột, label UI đều dùng TIẾNG VIỆT có dấu.
+
+BỐI CẢNH & QUY TẮC THỰC TẾ (BẮT BUỘC)
+- Lịch làm việc lập theo tuần (7 ngày/tuần) và xuất mỗi tuần 1 lần.
+- Phòng khám có 3 chi nhánh: TTV, 197, 796.
+- Giờ làm việc theo chi nhánh:
+  * TTV có 4 ca: 8h–19h, 8h30–19h30, 9h–20h, 10h–21h.
+  * 197 có 3 ca: 8h–19h, 9h–20h, 10h–21h.
+  * 796 có 1 ca: 9h–20h.
+- Mỗi ngày phải có 1 nhân viên “đi chích ngoài” ca 9h–20h.
+
+MỤC TIÊU SẢN PHẨM
+1) Chạy trên server (Linux) bằng Docker. Có website để:
+   - Quản lý nhân viên, ngày nghỉ, nhu cầu ca theo từng chi nhánh, và các trọng số ưu tiên.
+   - Bấm nút “XẾP LỊCH” để tạo lịch.
+   - Xem lịch dạng bảng theo template giống lịch xếp tay (hàng là khu vực/nhóm, cột là ngày trong tuần, mỗi ô là danh sách tên).
+   - Tải lịch về dạng Excel đúng template.
+
+2) Trang quản trị (Manage) gồm các mục:
+   A. NHÂN VIÊN
+      - Thêm/sửa/xóa, tìm kiếm
+      - Trường dữ liệu (tiếng Việt):
+        * Mã_NV (duy nhất), Tên_NV
+        * Vai_Trò/Kỹ_Năng (có thể nhiều giá trị: Bác sĩ, KTV, Lễ tân… tuỳ dùng)
+        * Cấp_Độ (Junior/Senior) (tuỳ chọn)
+        * Mức_Ưu_Tiên (số; càng cao càng được ưu tiên)
+        * Giờ_Tối_Đa_Tuần (số)
+        * Ca_Ưa_Thích (danh sách: 8-19, 8:30-19:30, 9-20, 10-21, v.v.)
+        * Ca_Tránh (danh sách)
+        * Ghi_Chú
+   B. NGÀY NGHỈ
+      - Chọn nhân viên + chọn ngày + trạng thái OFF + ghi chú
+   C. NHU CẦU CA (theo ngày)
+      - Cho phép khai báo theo từng ngày, từng chi nhánh
+      - Mỗi dòng nhu cầu gồm:
+        * Ngày
+        * Chi_Nhánh (TTV/197/796)
+        * Ca (theo danh sách ca hợp lệ của chi nhánh đó)
+        * Số_Người_Cần (headcount)
+        * Vai_Trò_Yêu_Cầu (tuỳ chọn)
+        * Độ_Quan_Trọng (1-5) (tuỳ chọn)
+        * Senior_Tối_Thiểu (tuỳ chọn)
+      - Riêng “Đi_Chích_Ngoài”:
+        * mỗi ngày tự tạo nhu cầu 1 người ca 9h–20h (hoặc cấu hình bật/tắt)
+   D. TRỌNG SỐ ƯU TIÊN (Weights)
+      - Các trọng số để tối ưu:
+        * Ưu tiên ca ưa thích
+        * Phạt ca tránh
+        * Công bằng chia đều ca “đi chích ngoài”
+        * Công bằng chia đều cuối tuần
+        * Ưu tiên nhân viên mức ưu tiên cao cho ca quan trọng
+        * (tuỳ chọn) hạn chế làm ca muộn hôm trước - ca sớm hôm sau
+
+THUẬT TOÁN XẾP LỊCH (BẮT BUỘC)
+- Dùng Google OR-Tools (CP-SAT) trong Python.
+- Hard constraints (bắt buộc thỏa):
+  1) Không xếp vào ngày OFF.
+  2) Mỗi nhu cầu ca phải đủ Số_Người_Cần (nếu không đủ, trả về lỗi rõ ràng và báo thiếu).
+  3) Đúng Vai_Trò_Yêu_Cầu nếu có khai báo.
+  4) Một nhân viên không được trùng ca trong cùng thời điểm; mặc định tối đa 1 ca/ngày (cho phép cấu hình nếu muốn).
+  5) Không vượt Giờ_Tối_Đa_Tuần.
+  6) “Đi chích ngoài” mỗi ngày đúng 1 người (nếu bật).
+- Soft constraints (tối ưu theo trọng số):
+  1) Cộng điểm nếu trúng Ca_Ưa_Thích.
+  2) Trừ điểm nếu vào Ca_Tránh.
+  3) Công bằng chia đều ca khó (đi chích ngoài / ca muộn / cuối tuần).
+  4) Ca quan trọng ưu tiên Senior hoặc Mức_Ưu_Tiên cao.
+
+TEMPLATE HIỂN THỊ (GIỐNG LỊCH XẾP TAY)
+- Trang “Xem lịch” hiển thị bảng:
+  - Cột: Thứ trong tuần + ngày (ví dụ: Hai 19/1/26, Ba 20/1/26, …, Chủ nhật 25/1/26)
+  - Hàng nhóm (ít nhất): CN1, CN2, CN3, CN, Spa (đây là các “khu vực/nhóm hiển thị”)
+  - Mỗi nhóm có danh sách ca giờ cố định hiển thị bên trái nhóm (giống template):
+    * CN1: 8h-19h, 8h30-19h30, 9h-20h, 10h-21h
+    * CN2: 8h-19h, 9h-20h, 10h-21h
+    * CN3: 9h-20h
+    * CN: 9h-20h
+    * Spa: 8h30-19h
+  - Trong mỗi ô (giao giữa nhóm và ngày) hiển thị danh sách tên nhân viên được xếp cho nhóm đó trong ngày đó (mỗi người 1 dòng).
+- Lưu ý: “CN1/CN2/CN3/CN/Spa” là các group hiển thị. Hãy cho phép cấu hình mapping: chi nhánh/ca nào thuộc group nào (ví dụ: CN1 có thể là TTV, CN2 là 197, … hoặc theo cấu hình).
+
+OUTPUT EXCEL (BẮT BUỘC)
+- Nút “Tải Excel” xuất file: OUTPUT_Lich_Lam_Viec.xlsx
+- Excel xuất ra phải theo đúng layout kiểu template xếp tay:
+  - Header theo thứ/ngày
+  - Các khối màu cho từng group (CN1 xanh nhạt, CN2 xanh lá nhạt, CN3 vàng nhạt, CN hồng nhạt, Spa xám nhạt) — màu có thể đơn giản nhưng phải phân vùng rõ.
+  - Mỗi ô chứa danh sách tên xuống dòng.
+- Giai đoạn 2 (nếu có thời gian): cho phép upload “Template Excel” sẵn và đổ dữ liệu vào đúng vị trí cell.
+
+TECH STACK & TRIỂN KHAI
+- Backend: Python + FastAPI + Uvicorn
+- DB: PostgreSQL (docker-compose) + SQLAlchemy + Alembic
+- Frontend: ưu tiên nhanh gọn bằng Jinja2 + Bootstrap (hoặc React nếu bạn thấy cần, nhưng phải có sẵn trang CRUD).
+- Dockerfile + docker-compose.yml đầy đủ (web + db).
+- Có seed dữ liệu mẫu (5-10 nhân viên, 1 tuần) để test ngay.
+
+CẤU TRÚC THƯ MỤC (ĐỀ XUẤT)
+backend/
+  app/
+    main.py
+    models.py
+    schemas.py
+    crud.py
+    scheduler/solver.py
+    templates/
+    static/
+  migrations/
+Dockerfile
+docker-compose.yml
+README.md (hướng dẫn chạy)
+
+TIÊU CHÍ HOÀN THÀNH (ACCEPTANCE)
+1) docker compose up -d chạy được, mở web xem được.
+2) CRUD nhân viên/ngày nghỉ/nhu cầu ca hoạt động.
+3) Bấm “XẾP LỊCH” tạo được lịch 7 ngày, thỏa hard constraints; nếu thiếu người thì báo thiếu.
+4) Trang “Xem lịch” hiển thị dạng bảng giống template.
+5) Tải Excel được và mở ra đúng bố cục, tên cột tiếng Việt.
+
+Hãy bắt đầu bằng việc:
+- Thiết kế schema DB
+- Tạo CRUD cơ bản
+- Viết solver OR-Tools
+- Viết trang hiển thị lịch + export Excel
+- Viết README triển khai 
+
+ế hoạch triển khai
+- 1) Thiết kế DB (PostgreSQL + SQLAlchemy + Alembic)
+  - Bảng nhan_vien: id, ma_nv (unique), ten_nv, cap_do, muc_uu_tien, gio_toi_da_tuan, ghi_chu.
+  - Bảng vai_tro và bảng liên kết nhan_vien_vai_tro.
+  - Bảng ca_lam: danh mục ca chuẩn (ví dụ 8h-19h, 8h30-19h30, 9h-20h, 10h-21h).
+  - Bảng liên kết nhan_vien_ca_ua_thich, nhan_vien_ca_tranh.
+  - Bảng ngay_nghi: id, nhan_vien_id, ngay, trang_thai (OFF), ghi_chu.
+  - Bảng chi_nhanh: TTV, 197, 796.
+  - Bảng nhu_cau_ca: ngay, chi_nhanh_id, ca_id, so_nguoi_can, vai_tro_yeu_cau_id (nullable), do_quan_trong, senior_toi_thieu.
+  - Bảng trong_so_uu_tien: lưu các weight.
+  - Bảng lich_tuan: meta lịch theo tuần (ngay_bat_dau, ngay_ket_thuc, trang_thai).
+  - Bảng lich_chi_tiet: lich_tuan_id, ngay, chi_nhanh_id, ca_id, nhan_vien_id, nhom_hien_thi_id.
+  - Bảng nhom_hien_thi: CN1/CN2/CN3/CN/Spa.
+  - Bảng mapping_nhom: chi_nhanh_id, ca_id, nhom_hien_thi_id (cho phép cấu hình mapping hiển thị).
+- 2) CRUD cơ bản (FastAPI + Jinja2 + Bootstrap)
+  - Trang quản trị Manage với các mục: Nhân viên, Ngày nghỉ, Nhu cầu ca, Trọng số.
+  - CRUD dạng bảng + form đơn giản, có tìm kiếm nhân viên.
+  - API nội bộ (FastAPI) để dùng lại khi xây solver.
+- 3) Solver OR-Tools (CP-SAT)
+  - Input: tuần (7 ngày), nhân viên, ngày nghỉ, nhu cầu ca, mapping nhóm, trọng số.
+  - Biến quyết định: x[e, d, chi_nhanh, ca] ∈ {0,1}.
+  - Hard constraints:
+    - Không làm ngày OFF.
+    - Đủ so_nguoi_can mỗi nhu cầu.
+    - Đúng vai_tro_yeu_cau nếu có.
+    - Mỗi ngày tối đa 1 ca/người (cấu hình).
+    - Không vượt gio_toi_da_tuan.
+    - Nếu bật “Đi_Chích_Ngoài”: mỗi ngày đúng 1 người ca 9h–20h.
+  - Soft constraints:
+    - + điểm ca ưa thích, - điểm ca tránh.
+    - Cân bằng ca khó (đi chích ngoài, ca muộn, cuối tuần).
+    - Ưu tiên senior/mức ưu tiên cao cho ca quan trọng.
+    - (tuỳ chọn) hạn chế ca muộn hôm trước - ca sớm hôm sau.
+  - Nếu thiếu người: trả về lỗi rõ ràng + danh sách thiếu (ngày/chi nhánh/ca).
+- 4) Hiển thị lịch dạng template
+  - Trang “Xem lịch” dùng bảng HTML theo template:
+    - Cột: thứ + ngày (Hai 19/1/26 … Chủ nhật).
+    - Hàng nhóm: CN1, CN2, CN3, CN, Spa.
+    - Trong mỗi ô: danh sách tên nhân viên theo ngày + nhóm.
+  - Mapping nhóm lấy từ bảng mapping_nhom.
+- 5) Xuất Excel
+  - Nút “Tải Excel” tạo OUTPUT_Lich_Lam_Viec.xlsx.
+  - Dùng openpyxl: tạo header ngày, tô màu từng group, mỗi ô xuống dòng tên.

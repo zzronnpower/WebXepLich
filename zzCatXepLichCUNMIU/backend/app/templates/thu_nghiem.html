@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block noi_dung %}
+  <section class="khung">
+    <div class="tieu-de-hang">
+      <h2>Kiểm thử tối ưu</h2>
+      <a class="nut-phu" href="/">Quay lại lịch</a>
+    </div>
+    <form class="form-hang" action="/thu-nghiem" method="get">
+      <div class="truong">
+        <label>Ngày bắt đầu (thứ Hai)</label>
+        <input type="date" name="ngay_bat_dau" value="{{ ngay_mac_dinh }}" required />
+      </div>
+      <button class="nut-chinh" type="submit">Chạy kiểm thử</button>
+    </form>
+  </section>
+
+  {% if ket_qua is not none %}
+    <section class="khung">
+      <h3>Kết quả theo kịch bản trọng số</h3>
+      <table class="bang-nho">
+        <thead>
+          <tr>
+            <th>Kịch bản</th>
+            <th>Điểm tối ưu</th>
+            <th>Tổng phân công</th>
+            <th>Ca ưa thích</th>
+            <th>Ca tránh</th>
+            <th>Chích ngoài</th>
+            <th>Cuối tuần</th>
+            <th>Ca quan trọng</th>
+            <th>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for dong in ket_qua %}
+            <tr>
+              <td>{{ dong.ten }}</td>
+              <td>{{ dong.diem }}</td>
+              <td>{{ dong.tong_phan_cong }}</td>
+              <td>{{ dong.thong_ke.ca_ua_thich }}</td>
+              <td>{{ dong.thong_ke.ca_tranh }}</td>
+              <td>{{ dong.thong_ke.chich_ngoai }}</td>
+              <td>{{ dong.thong_ke.cuoi_tuan }}</td>
+              <td>{{ dong.thong_ke.ca_quan_trong }}</td>
+              <td>{{ "OK" if dong.thanh_cong else dong.thong_bao }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  {% endif %}
+{% endblock %}

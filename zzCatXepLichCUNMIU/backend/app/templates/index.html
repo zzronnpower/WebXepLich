@@ -1,0 +1,459 @@
+{% extends "base.html" %}
+{% block noi_dung %}
+  <section class="khung hero">
+    <div>
+      <h1>Lịch làm việc theo tuần</h1>
+      <p>Quản lý dữ liệu, xếp lịch nhanh, xem bảng theo template và tải Excel trực tiếp.</p>
+    </div>
+    <form class="form-hang" action="/xep-lich" method="post">
+      <div class="truong">
+        <label>Ngày bắt đầu (thứ Hai)</label>
+        <input type="date" name="ngay_bat_dau" value="{{ ngay_mac_dinh }}" required />
+      </div>
+      <button class="nut-chinh" type="submit">XẾP LỊCH</button>
+      <button class="nut-chinh nut-tu-xep" type="submit" formaction="/tu-xep-lich" formmethod="post">Tự xếp lịch</button>
+    </form>
+    <form class="form-hang" action="/ngay-nghi/nhieu" method="post" id="form-ngay-nghi">
+      <div class="truong">
+        <label>Nhân viên nghỉ</label>
+        <select name="nhan_vien_id" required>
+          {% for nv in ds_nhan_vien %}
+            <option value="{{ nv.id }}">{{ nv.ma_nv }} - {{ nv.ten_nv }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="truong">
+        <label>Ngày nghỉ (có thể thêm nhiều ngày)</label>
+        <div class="nhom-ngay-nghi">
+          <input type="date" name="ngay_list" required />
+        </div>
+      </div>
+      <button class="nut-phu" type="button" id="them-ngay-nghi">+ Thêm ngày</button>
+      <button class="nut-chinh" type="submit">Lưu ngày nghỉ</button>
+    </form>
+    {% if loi %}
+      <div class="canh-bao">
+        <strong>{{ loi }}</strong>
+        {% if thieu_nhu_cau %}
+          <ul>
+            {% for dong in thieu_nhu_cau %}
+              <li>{{ dong }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+    {% endif %}
+    {% if loi_ngay_nghi %}
+      <div class="canh-bao">
+        <strong>{{ loi_ngay_nghi }}</strong>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="khung">
+    <div class="tieu-de-hang">
+      <h2>Ngày nghỉ đã nhập</h2>
+      <form action="/ngay-nghi/xoa-tat-ca" method="post" id="xoa-tat-ca-ngay-nghi">
+        <input type="hidden" name="redirect_to" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}" />
+        <button class="nut-phu" type="submit">Xóa tất cả</button>
+      </form>
+    </div>
+    {% if ngay_list_nghi %}
+      <div class="bang-lich">
+        <table class="bang-nghi">
+          <thead>
+            <tr>
+              <th class="cot-nhom"></th>
+              {% for ngay in ngay_list_nghi %}
+                <th>{{ ten_thu(ngay) }} {{ ngay.strftime('%d/%m/%y') }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="cot-nhom"></td>
+              {% for ngay in ngay_list_nghi %}
+                <td>
+                  {% for nn in ngay_nghi_theo_ngay.get(ngay, []) %}
+                    <div class="hang-xoa-nho">
+                      <span class="ten-nghi">{{ nn.nhan_vien.ten_nv }}</span>
+                      <form action="/ngay-nghi/{{ nn.id }}/xoa" method="post">
+                        <input type="hidden" name="redirect_to" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}" />
+                        <button class="nut-phu nut-nho" type="submit">Xóa</button>
+                      </form>
+                    </div>
+                  {% endfor %}
+                </td>
+              {% endfor %}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>Chưa có ngày nghỉ được nhập.</p>
+    {% endif %}
+  </section>
+
+  <section class="khung">
+    <div class="tieu-de-hang">
+      <h2>Bảng lịch hiển thị</h2>
+      {% if lich %}
+        <a class="nut-phu" href="/lich-da-xep">Quản lý lịch đã xếp</a>
+        <a class="nut-phu" href="/tai-excel?lich_tuan_id={{ lich.lich_tuan.id }}">Tải Excel</a>
+        <a class="nut-phu" href="/kiem-tra?lich_tuan_id={{ lich.lich_tuan.id }}">Kiểm tra ràng buộc</a>
+        <button class="nut-phu" type="button" id="toggle-khoa-off">Khóa NV OFF: BẬT</button>
+        <button class="nut-phu" type="button" id="toggle-to-sang">Tắt tô sáng</button>
+        <button class="nut-phu" type="button" id="luu-keo-tha" data-lich-tuan-id="{{ lich.lich_tuan.id }}">Lưu kéo thả</button>
+      {% endif %}
+    </div>
+    {% if lich %}
+      <div id="thong-bao-keo-tha" class="canh-bao" style="display: none;"></div>
+    {% endif %}
+    {% if lich %}
+      <div class="bang-lich">
+        <table>
+          <thead>
+            <tr>
+              <th>Nhóm / Ca</th>
+              {% for ngay in lich.ngay_list %}
+                <th>{{ ten_thu(ngay) }} {{ ngay.strftime('%d/%m/%y') }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for nhom in lich.nhom_list %}
+              <tr style="background: {{ nhom.mau_nen }};">
+                <td>
+                  <div class="ten-nhom">{{ ten_nhom_hien_thi(nhom.ten_nhom) }}</div>
+                  <div class="ds-ca">
+                    {% for ca in danh_sach_ca_nhom.get(nhom.ten_nhom, []) %}
+                      <div class="the-nv ca-chip">{{ ca }}</div>
+                    {% endfor %}
+                  </div>
+                </td>
+                {% for ngay in lich.ngay_list %}
+                  <td class="o-lich" data-ngay="{{ ngay }}" data-nhom-id="{{ nhom.id }}" data-ten-nhom="{{ nhom.ten_nhom }}">
+                    {% for item in lich.bang[nhom.id][ngay] %}
+                      <div
+                        class="the-nv{% if item.cap_do and ('chính' in item.cap_do|lower or 'bac sy chinh' in item.cap_do|lower) %} the-nv-chinh{% endif %}"
+                        draggable="true"
+                        data-lich-ct-id="{{ item.id }}"
+                        data-ngay="{{ ngay }}"
+                        data-khoa-keo-tha="{{ '1' if item.khoa_keo_tha else '0' }}"
+                        data-thu-tu="{{ item.thu_tu }}"
+                      >
+                        {{ item.ten_nv }}
+                      </div>
+                    {% endfor %}
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="khung-spa-off">
+        <h3>SPA OFF</h3>
+        <div class="bang-spa-off">
+          <table>
+            <thead>
+              <tr>
+                <th>Ghi chú</th>
+                {% for ngay in lich.ngay_list %}
+                  <th>{{ ten_thu(ngay) }} {{ ngay.strftime('%d/%m/%y') }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="nhan-spa-off">SPA OFF</td>
+                {% for ngay in lich.ngay_list %}
+                  <td>
+                    <textarea
+                      class="ghi-chu-spa-off"
+                      placeholder="Ghi chú SPA OFF {{ ten_thu(ngay) }} {{ ngay.strftime('%d/%m') }}"
+                    ></textarea>
+                  </td>
+                {% endfor %}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% else %}
+      <p>Chưa có lịch tuần. Hãy bấm XẾP LỊCH để tạo.</p>
+    {% endif %}
+  </section>
+  {% if lich %}
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const lichTuanId = document.getElementById("luu-keo-tha")?.dataset.lichTuanId
+        const toggleKhoaOff = document.getElementById("toggle-khoa-off")
+        const KHOA_OFF_KEY = "xeplich_khoa_nv_off"
+        const changes = new Map()
+        let draggedItem = null
+        let khoaNvOff = true
+
+        const isOffLocked = item => {
+          if (!item) return false
+          const cell = item.closest(".o-lich")
+          const tenNhom = String(cell?.dataset.tenNhom || "").toUpperCase().trim()
+          const dangTrongOff = tenNhom === "OFF" || tenNhom === "SPA"
+          return khoaNvOff && dangTrongOff && item.dataset.khoaKeoTha === "1"
+        }
+
+        const updateKhoaOffUi = () => {
+          if (!toggleKhoaOff) return
+          toggleKhoaOff.textContent = `Khóa NV OFF: ${khoaNvOff ? "BẬT" : "TẮT"}`
+          toggleKhoaOff.classList.toggle("dang-bat", khoaNvOff)
+        }
+
+        const applyKhoaOffState = () => {
+          document.querySelectorAll(".the-nv").forEach(item => {
+            const locked = isOffLocked(item)
+            item.draggable = !locked
+            item.classList.toggle("the-nv-off-locked", locked)
+          })
+          updateKhoaOffUi()
+        }
+
+        try {
+          const raw = localStorage.getItem(KHOA_OFF_KEY)
+          if (raw === "0") khoaNvOff = false
+          if (raw === "1") khoaNvOff = true
+        } catch (_) {}
+        applyKhoaOffState()
+
+        toggleKhoaOff?.addEventListener("click", () => {
+          khoaNvOff = !khoaNvOff
+          try {
+            localStorage.setItem(KHOA_OFF_KEY, khoaNvOff ? "1" : "0")
+          } catch (_) {}
+          applyKhoaOffState()
+        })
+
+        const handleDragStart = event => {
+          const item = event.target.closest(".the-nv")
+          if (!item) return
+          if (isOffLocked(item)) {
+            event.preventDefault()
+            return
+          }
+          draggedItem = item
+          item.classList.add("dang-keo")
+          event.dataTransfer.setData("text/plain", item.dataset.lichCtId)
+          event.dataTransfer.effectAllowed = "move"
+        }
+
+        const handleDragEnd = () => {
+          document.querySelectorAll(".o-lich").forEach(cell => {
+            cell.classList.remove("o-lich-hover", "drop-before", "drop-after")
+          })
+          document.querySelectorAll(".the-nv.dang-keo").forEach(item => item.classList.remove("dang-keo"))
+          draggedItem = null
+        }
+
+        const validDropCell = (cell, sourceItem) => {
+          if (!cell || !sourceItem) return false
+          if (cell.dataset.ngay !== sourceItem.dataset.ngay) return false
+          return true
+        }
+
+        const getDropReference = (cell, event, sourceItem) => {
+          const cards = Array.from(cell.querySelectorAll(".the-nv")).filter(el => el !== sourceItem)
+          let reference = null
+          for (const card of cards) {
+            const rect = card.getBoundingClientRect()
+            const midY = rect.top + rect.height / 2
+            if (event.clientY < midY) {
+              reference = card
+              break
+            }
+          }
+          return reference
+        }
+
+        const markCellDropDirection = (cell, reference) => {
+          cell.classList.remove("drop-before", "drop-after")
+          if (!reference) {
+            cell.classList.add("drop-after")
+            return
+          }
+          cell.classList.add("drop-before")
+        }
+
+        const markCellChanges = cell => {
+          const ngay = cell.dataset.ngay
+          const nhomId = parseInt(cell.dataset.nhomId, 10)
+          const cards = Array.from(cell.querySelectorAll(".the-nv"))
+          cards.forEach((card, idx) => {
+            const lichCtId = card.dataset.lichCtId
+            if (!lichCtId) return
+            changes.set(lichCtId, {
+              id: parseInt(lichCtId, 10),
+              ngay,
+              nhom_hien_thi_id: nhomId,
+              thu_tu: idx + 1,
+            })
+          })
+        }
+
+        const handleDragOver = event => {
+          const cell = event.target.closest(".o-lich")
+          if (!cell || !draggedItem) return
+          if (!validDropCell(cell, draggedItem)) return
+          event.preventDefault()
+          event.dataTransfer.dropEffect = "move"
+          document.querySelectorAll(".o-lich").forEach(c => {
+            if (c !== cell) c.classList.remove("o-lich-hover", "drop-before", "drop-after")
+          })
+          cell.classList.add("o-lich-hover")
+          const ref = getDropReference(cell, event, draggedItem)
+          markCellDropDirection(cell, ref)
+        }
+
+        const handleDrop = event => {
+          const cell = event.target.closest(".o-lich")
+          if (!cell) return
+          if (!draggedItem) return
+          if (!validDropCell(cell, draggedItem)) return
+          event.preventDefault()
+          const lichCtId = event.dataTransfer.getData("text/plain")
+          const item = document.querySelector(`.the-nv[data-lich-ct-id='${lichCtId}']`)
+          if (!item) return
+          const sourceCell = item.closest(".o-lich")
+          const ref = getDropReference(cell, event, item)
+          if (ref) {
+            cell.insertBefore(item, ref)
+          } else {
+            cell.appendChild(item)
+          }
+          markCellChanges(cell)
+          if (sourceCell && sourceCell !== cell) {
+            markCellChanges(sourceCell)
+          }
+          handleDragEnd()
+        }
+
+        document.addEventListener("dragstart", event => {
+          if (event.target.closest(".the-nv")) {
+            handleDragStart(event)
+          }
+        })
+
+        document.addEventListener("dragend", handleDragEnd)
+
+        document.querySelectorAll(".o-lich").forEach(cell => {
+          cell.addEventListener("dragover", handleDragOver)
+          cell.addEventListener("drop", handleDrop)
+          cell.addEventListener("dragleave", event => {
+            if (event.target === cell) {
+              cell.classList.remove("o-lich-hover", "drop-before", "drop-after")
+            }
+          })
+        })
+
+        document.getElementById("luu-keo-tha")?.addEventListener("click", async () => {
+          const thongBao = document.getElementById("thong-bao-keo-tha")
+          if (!lichTuanId) return
+          if (changes.size === 0) {
+            if (thongBao) {
+              thongBao.style.display = "block"
+              thongBao.textContent = "Không có thay đổi để lưu."
+              thongBao.style.background = "rgba(148, 190, 255, 0.18)"
+              thongBao.style.borderColor = "rgba(148, 190, 255, 0.6)"
+            }
+            return
+          }
+          const payload = {
+            lich_tuan_id: parseInt(lichTuanId, 10),
+            khoa_nv_off: khoaNvOff,
+            changes: Array.from(changes.values()),
+          }
+          try {
+            const res = await fetch("/cap-nhat-lich", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            })
+            const data = await res.json()
+            if (thongBao) {
+                thongBao.style.display = "block"
+                if (data.ok) {
+                  changes.clear()
+                if (data.errors && data.errors.length > 0) {
+                  thongBao.textContent = `Đã lưu kéo thả, nhưng có lỗi ràng buộc: ${data.errors[0]}`
+                  thongBao.style.background = "rgba(255, 214, 102, 0.2)"
+                  thongBao.style.borderColor = "rgba(255, 214, 102, 0.6)"
+                } else {
+                  thongBao.textContent = "Đã lưu kéo thả."
+                  thongBao.style.background = "rgba(94, 255, 180, 0.18)"
+                  thongBao.style.borderColor = "rgba(94, 255, 180, 0.6)"
+                }
+                setTimeout(() => {
+                  window.location.reload()
+                }, 300)
+              } else {
+                thongBao.textContent = data.message || "Không thể lưu kéo thả."
+                thongBao.style.background = "rgba(255, 104, 104, 0.2)"
+                thongBao.style.borderColor = "rgba(255, 104, 104, 0.5)"
+              }
+            }
+          } catch (error) {
+            if (thongBao) {
+              thongBao.style.display = "block"
+              thongBao.textContent = "Không thể lưu kéo thả do lỗi kết nối."
+              thongBao.style.background = "rgba(255, 104, 104, 0.2)"
+              thongBao.style.borderColor = "rgba(255, 104, 104, 0.5)"
+            }
+          }
+        })
+
+        const toggleToSang = document.getElementById("toggle-to-sang")
+        if (toggleToSang) {
+          toggleToSang.addEventListener("click", () => {
+            document.body.classList.toggle("tat-to-sang")
+            const isOff = document.body.classList.contains("tat-to-sang")
+            toggleToSang.textContent = isOff ? "Bật tô sáng" : "Tắt tô sáng"
+          })
+        }
+      })
+    </script>
+  {% endif %}
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const addBtn = document.getElementById("them-ngay-nghi")
+      const container = document.querySelector("#form-ngay-nghi .nhom-ngay-nghi")
+      if (!addBtn || !container) return
+      addBtn.addEventListener("click", () => {
+        const input = document.createElement("input")
+        input.type = "date"
+        input.name = "ngay_list"
+        container.appendChild(input)
+      })
+
+      const xoaForm = document.getElementById("xoa-tat-ca-ngay-nghi")
+      if (!xoaForm) return
+      xoaForm.addEventListener("submit", async event => {
+        event.preventDefault()
+        const ok = window.confirm("Xóa toàn bộ ngày nghỉ đã nhập? Hành động này không thể hoàn tác.")
+        if (!ok) return
+        try {
+          const res = await fetch(xoaForm.action, {
+            method: "POST",
+            body: new FormData(xoaForm),
+          })
+          if (!res.ok) {
+            window.alert("Không thể xóa toàn bộ ngày nghỉ.")
+            return
+          }
+          const redirectInput = xoaForm.querySelector("input[name='redirect_to']")
+          const target = redirectInput?.value || window.location.pathname + window.location.search
+          window.location.assign(target)
+        } catch (error) {
+          window.alert("Không thể xóa toàn bộ ngày nghỉ.")
+        }
+      })
+    })
+  </script>
+{% endblock %}

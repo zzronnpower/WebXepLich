@@ -1,0 +1,223 @@
+# Project Log
+
+## Summary of Changes (to date)
+
+- Added `AGENTS.md` with build/run guidance, coding conventions, and repo map.
+- Introduced WSL-friendly ops helpers:
+  - Added `.env.example` and `Makefile` for `docker-up`, logs, reset DB.
+  - Expanded `README.md` with WSL notes and local run steps.
+- Fixed scheduling and Excel issues:
+  - Corrected CP-SAT literal boolean check in `solver.py`.
+  - Excel headers now use Vietnamese diacritics.
+  - Improved schedule table text contrast; employee names are black and bold.
+- Added consolidated management UI:
+  - New `/quan-ly` page to add/update employees, edit priority weights, and run scheduling.
+  - Added employee update endpoint and forms for quick updates.
+- Updated UI labels across templates to Vietnamese with diacritics.
+- Added display mappings for weight keys and group names:
+  - Weight keys now show Vietnamese labels in UI tables.
+  - Group name `CN` displays as “Chích ngoài” in the schedule table and Excel.
+- Updated labels in weights form placeholders to Vietnamese.
+- Standardized doctor role/cap_do display strings to “Bác sỹ”.
+- Updated dropdown labels for employee level to “Bác sỹ mới/chính”.
+- Solver now treats “Bác sỹ chính” as senior for priority scoring.
+- Added auto-generated employee codes (BSxx) when adding staff.
+- Redesigned add-employee form layout for a cleaner grid layout.
+- Added auto-fill and compact layout for the employee update form.
+- Added auto-fill support on the /nhan-vien page using a quick select list.
+- Documented autofill/form layout conventions in AGENTS.md with HTML/JS examples.
+- Added per-employee weight preferences (up to 3) with priority multipliers.
+- Updated forms to capture weight preferences and autofill them in edit flows.
+- Added delete action for weight definitions on /trong-so and /quan-ly.
+- Weight values now come from the weight definitions (no manual entry per employee).
+- Weight definitions now support inline value edits in the tables.
+- Weight selectors now display current weight values inline.
+- Weight value inputs now use dropdowns (1-5) instead of free number input.
+- Badge hints simplified to show only the level indicator.
+- Fixed badge hints to update per select without extra label text.
+- Added schedule validation page (/kiem-tra) to auto-check constraints.
+- Auto-generate shift demands for new weeks by copying the latest week.
+- Preserve selected week date on scheduling errors.
+- Added /thu-nghiem to compare optimization scores across weight scenarios.
+- Added drag-and-drop schedule editing with save to DB.
+- Save action now returns constraint checks and shows yellow warning on blocking errors.
+- Error messages now include staff name, branch, and shift details for duplicate assignments.
+- Constraint check now includes chích ngoài demand when saving drag-and-drop.
+- Drag-and-drop saving now reports connection errors and prevents text selection.
+- Saving drag-and-drop now returns structured errors instead of fetch failures.
+- Release v1.0.0 created: version đầu tiên chạy stable ngày 25/01/2026.
+- Renamed Spa group to OFF (Ngày nghỉ) and auto-migrate existing data on startup.
+- Added OFF auto-fill for unassigned staff after scheduling and integrated OFF day input + sorting UI.
+- Enforced default demands for 9h-20h and 10h-21h shifts at 326TTV and 197LT5 when missing.
+- Aligned OFF overview columns with schedule table and added week-only OFF list layout.
+- Added logo header for Phòng Khám Thú Y Cún Miu and tightened header spacing.
+- Added "Top" (7) weight level, restored per-row edits on /trong-so, and locked edits in /quan-ly.
+- Added "Không đi chích ngoài" soft penalty and auto-ensure weight in DB on startup.
+- Enhanced staff screens with multi-select toggles and visible lists for preferred/avoid shifts and branches.
+- Added global theme switcher with 3 themes:
+  - Default (existing dark style)
+  - Pinky (warm beige/pink)
+  - Light Green (sage/olive)
+- Implemented theme engine at `backend/app/static/theme.js` with localStorage persistence.
+- Added theme token overrides in `backend/app/static/style.css` and floating selector dock.
+- Wired theme script in `backend/app/templates/base.html` so all pages share the same theme selection.
+
+## Latest Update (2026-02-23)
+
+- Added schedule editing and management enhancements:
+  - New page `/lich-da-xep` to list all schedule runs and reopen any week for editing.
+  - Main schedule page now links directly to schedule history management.
+- Added ChatLog page:
+  - New route `/chatlog` and template `backend/app/templates/chatlog.html`.
+  - Added ChatLog link in global navigation.
+- Updated system groups and display flow:
+  - Added `PHU_SPA` group (manual-only zone, ca hiển thị `8h30-19h30`, no branch mapping).
+  - Added `CHUA_XEP` group so unassigned staff are no longer auto-converted to OFF.
+  - Group order now renders as: 326TTV, 197LT5, 796ADV, Chích ngoài, Phụ Spa, OFF, Chưa xếp.
+- Drag-drop UX and constraints improved on weekly schedule table:
+  - Vertical-only drag/drop (same date only), horizontal drag blocked.
+  - Supports insert at top/middle/bottom with visual drop indicator.
+  - Fixed reverse reorder behavior (drag from below to above).
+  - Added per-item ordering support (`lich_chi_tiet.thu_tu`) for stable rendering.
+- OFF lock behavior implemented:
+  - OFF created from real leave registration (`NgayNghi`) is now hard-locked (frontend + backend validation).
+  - Locked OFF cards use a dedicated highlight color in OFF area.
+- Visual polish updates:
+  - Shift labels are larger, better spaced, and align more cleanly with assignment cards.
+- Maintenance rule added:
+  - `AGENTS.md` now requires automatic updates of `chatlog.html`, `AGENTS.md`, and `PROJECT_LOG.md` after each coding task.
+
+## Latest Update (2026-02-23, follow-up)
+
+- Replaced hard OFF lock with user-controlled toggle on schedule board:
+  - Added `Khóa NV OFF` toggle button next to `Kiểm tra ràng buộc`.
+  - Toggle ON: registered OFF staff are non-draggable.
+  - Toggle OFF: all staff can be dragged normally.
+  - Toggle state is persisted in browser localStorage and passed to `/cap-nhat-lich` payload.
+- Updated backend save validation to respect toggle state:
+  - OFF lock checks now apply only when `khoa_nv_off = true`.
+  - Vertical-only drag rule remains enforced.
+- Fixed action button overlap on `Lịch đã xếp`:
+  - Wrapped action links into a dedicated flex container with wrapping + spacing.
+  - Added action column width and no-wrap button text styling for clean alignment.
+
+## Latest Update (2026-02-23, UI alignment follow-up)
+
+- Refined `Nhóm / Ca` readability on weekly schedule table:
+  - Shift labels are now rendered as dedicated chips (`.ca-chip`) instead of plain text lines.
+  - Increased shift text visual weight/size and spacing so row rhythm aligns better with employee cards.
+  - Improved group title typography to better match the assignment column.
+- Hardened `Lịch đã xếp` action layout to eliminate overlap:
+  - Increased action column width and prevented button shrinking.
+  - Forced one-line action buttons with nowrap and no-flex-shrink behavior.
+  - Enabled horizontal overflow safety via wider table min-width.
+
+## Latest Update (2026-02-23, hotfix visual regression)
+
+- Fixed schedule table left column shift labels so they no longer look like tiny plain text:
+  - Shift lines now reuse card visual language (`the-nv ca-chip`) for clearer alignment with assigned staff cards.
+  - Updated chip typography and spacing to match row rhythm.
+- Reworked `Lịch đã xếp` action column with deterministic layout:
+  - Added fixed column widths via `colgroup`.
+  - Switched action container to 3-column grid (`Mở & chỉnh sửa`, `Kiểm tra`, `Excel`).
+  - Prevented per-button text wrap/shrink and increased table min-width for stable rendering.
+
+## Latest Update (2026-02-23, alignment + color follow-up)
+
+- Adjusted left column alignment across all branches/groups so assignment cards visually align with group label lane:
+  - Increased and stabilized `ten-nhom` label lane (`min-height`, flex alignment).
+  - Shift list (`ds-ca`) is clearly pushed below label lane to avoid blending with employee row 1.
+- Applied exact branch-row background feel for shift chips:
+  - `ca-chip` now uses transparent background (same as parent row color), no separate chip fill.
+- Strengthened action-button anti-overlap rules on `Lịch đã xếp`:
+  - Enforced `white-space: nowrap !important` and `flex-shrink: 0` on action buttons.
+
+## Current State
+
+- Docker app is running under WSL; port conflicts previously resolved by removing orphan containers.
+- Scheduling output displays in the weekly table; if blank, verify `lich_chi_tiet` rows in DB.
+- Data is seeded on first startup; reset DB with `docker compose down -v` to re-seed.
+
+## Latest Requested Changes (pending DB reset)
+
+- Added employee-to-branch restrictions (new `nhan_vien_chi_nhanh` join table).
+- UI now supports selecting allowed branches per employee.
+- Renamed branches/groups to:
+  - `326TTV`, `197LT5`, `796ADV`.
+- Seed data updated to new doctors list:
+  - Bác sĩ chính: Hữu, Nhựt, Hồng, Thy
+  - Bác sĩ mới: Thùy, My, Hà, Đạt, Hiếu, Phong, Đăng
+  - Branch restrictions: Hữu -> 326, Nhựt -> 197, Đăng -> 796
+
+## To Apply Schema + Seed Updates
+
+```bash
+sudo docker compose down -v
+sudo docker compose up -d --build
+```
+
+This will wipe existing data and re-seed the updated dataset.
+
+## Latest Update (2026-02-23, row alignment fix)
+
+- Fixed row alignment between shift times and employee cards on weekly schedule board:
+  - Applied a shared lane offset with CSS variable `--lane-nhom-ca` on `.bang-lich`.
+  - Added `padding-top: var(--lane-nhom-ca)` to `.o-lich` so first employee card starts at the same vertical level as first shift line.
+- Root-cause and layout rule:
+  - Root-cause was asymmetric vertical offsets: left column had `ten-nhom` lane (`min-height + margin`) plus `ds-ca` top gap, while assignment cells started at top with no equivalent offset.
+  - New rule enforces symmetric lane spacing between "Nhóm / Ca" and assignment columns to prevent one-line upward drift.
+
+## Latest Update (2026-02-23, OFF lock source rule)
+
+- Updated OFF lock behavior to target only user-registered leave records:
+  - Lock set now includes only `ngay_nghi` rows with `trang_thai='OFF'` and source from user (`nguon='user'`, with backward-compatible fallback for old null values).
+  - OFF cards created by scheduling/manual drag without matching user leave registration remain draggable even when `Khóa NV OFF` is ON.
+- Data model hardening:
+  - Added `ngay_nghi.nguon` column with startup migration (`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`) and backfill for null/empty values to `user`.
+  - New leave entries from UI now persist `nguon='user'` explicitly.
+
+## Latest Update (2026-02-23, scheduling OFF vs CHUA_XEP rule)
+
+- Updated weekly scheduler output behavior:
+  - OFF now represents only registered leave entries (`ngay_nghi.trang_thai='OFF'`).
+  - Any staff/day not assigned by solver and not in registered leave is placed into `CHUA_XEP` for manual review/drag-drop assignment.
+- Removed fallback that previously sent unassigned staff to OFF when `CHUA_XEP` was missing:
+  - Scheduler now auto-creates `CHUA_XEP` group if absent, then routes unassigned staff there.
+- Added safety normalization on schedule creation:
+  - If any generated OFF row does not match registered leave set, it is auto-moved to `CHUA_XEP` in the same run.
+
+## Latest Update (2026-02-23, manual-first scheduling button)
+
+- Added new action button `Tự xếp lịch` next to `XẾP LỊCH` on home page.
+- Added backend route `/tu-xep-lich` and new scheduler flow to create a manual-first weekly board:
+  - Staff with registered leave are placed in `OFF` on the exact leave dates.
+  - All remaining staff/day entries are placed in `CHUA_XEP` for manual drag-drop assignment.
+  - No branch/shift auto-assignment is created in this mode (`chi_nhanh_id` and `ca_id` remain null).
+
+## Latest Update (2026-02-23, button visual adjustment)
+
+- Updated the `Tự xếp lịch` button visual treatment on the home form:
+  - Switched to the same primary button sizing as `XẾP LỊCH`.
+  - Applied dark green background (`.nut-tu-xep`) for clearer manual-first action distinction.
+
+## Latest Update (2026-02-23, schedule history management)
+
+- Added rename/delete management for saved schedules at `/lich-da-xep`:
+  - Inline rename form per row (save display title directly on schedule run).
+  - Delete action per row with confirmation prompt, removing the selected schedule run.
+- Data model and migration:
+  - Added `lich_tuan.ten_lich` column for explicit schedule naming.
+  - Added startup migration/backfill for existing rows, generating default names from status + start date.
+- UX/layout updates in schedule history table:
+  - Added `Tên lịch` column.
+  - Expanded action column/grid to include the new `Xóa` button without overlap.
+
+## Latest Update (2026-02-23, SPA OFF temporary note area)
+
+- Added a separate `SPA OFF` section below the main schedule board (visually detached with spacing and dashed container).
+- For each day column in the current week, added one multiline textarea for operator notes.
+- This area is intentionally non-persistent:
+  - no API call,
+  - no DB write,
+  - no localStorage save,
+  - content is temporary and resets on page reload.

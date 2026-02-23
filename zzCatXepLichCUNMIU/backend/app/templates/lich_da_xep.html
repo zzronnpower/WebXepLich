@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block noi_dung %}
+  <section class="khung">
+    <div class="tieu-de-hang">
+      <h2>Lịch đã xếp</h2>
+      <a class="nut-phu" href="/">Về bảng lịch</a>
+    </div>
+    {% if ds_lich_tuan %}
+      <div class="bang-lich">
+        <table class="lich-su-bang">
+          <colgroup>
+            <col class="cot-id" />
+            <col class="cot-ten" />
+            <col class="cot-tuan" />
+            <col class="cot-trang-thai" />
+            <col class="cot-ghi-chu" />
+            <col class="cot-hanh-dong" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Tên lịch</th>
+              <th>Tuần</th>
+              <th>Trạng thái</th>
+              <th>Ghi chú</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lich in ds_lich_tuan %}
+              <tr>
+                <td>#{{ lich.id }}</td>
+                <td>
+                  <form action="/lich-da-xep/{{ lich.id }}/doi-ten" method="post" class="form-doi-ten-lich">
+                    <input
+                      type="text"
+                      name="ten_lich"
+                      value="{{ lich.ten_lich or ('Lịch ' ~ lich.ngay_bat_dau.strftime('%d/%m/%Y')) }}"
+                      maxlength="120"
+                      required
+                    />
+                    <button class="nut-phu" type="submit">Lưu tên</button>
+                  </form>
+                </td>
+                <td>{{ lich.ngay_bat_dau.strftime('%d/%m/%Y') }} - {{ lich.ngay_ket_thuc.strftime('%d/%m/%Y') }}</td>
+                <td>{{ lich.trang_thai or 'MOI' }}</td>
+                <td>{{ lich.ghi_chu or '-' }}</td>
+                <td class="o-hanh-dong">
+                  <div class="lich-su-hanh-dong">
+                    <a class="nut-phu" href="/?lich_tuan_id={{ lich.id }}">Mở & chỉnh sửa</a>
+                    <a class="nut-phu" href="/kiem-tra?lich_tuan_id={{ lich.id }}">Kiểm tra</a>
+                    <a class="nut-phu" href="/tai-excel?lich_tuan_id={{ lich.id }}">Excel</a>
+                    <form action="/lich-da-xep/{{ lich.id }}/xoa" method="post" onsubmit="return confirm('Xóa lịch #{{ lich.id }}? Dữ liệu chi tiết lịch sẽ bị xóa.');">
+                      <button class="nut-phu nut-xoa-lich" type="submit">Xóa</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>Chưa có lịch nào được tạo.</p>
+    {% endif %}
+  </section>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block noi_dung %}
+  <section class="khung">
+    <div class="tieu-de-hang">
+      <h2>ChatLog</h2>
+      <span class="goi-y">Lưu lịch sử trao đổi và thay đổi đã triển khai.</span>
+    </div>
+    <div class="luoi-2">
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Rà soát bug kéo thả: không kéo vào giữa, không kéo lên trên, cần OFF khóa cứng, kéo dọc mượt, cần khu chưa xếp và quản lý lịch đã xếp.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã triển khai: kéo dọc cùng ngày, chèn đầu/giữa/cuối, OFF đăng ký nghỉ khóa cứng, thêm Phụ Spa, thêm Chưa xếp, thêm quản lý lịch đã xếp và ChatLog.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu thêm: nền OFF khóa cứng có màu riêng (chỉ trong OFF), Phụ Spa đặt giữa Chích ngoài và OFF, thêm Chưa xếp ở dưới OFF.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã cập nhật đúng thứ tự nhóm hiển thị, OFF có màu nhận diện riêng, và thêm quy tắc tự cập nhật ChatLog + AGENTS + PROJECT_LOG sau mỗi lần code.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu đổi cơ chế khóa OFF thành toggle: bật thì khóa nhân viên OFF đăng ký nghỉ, tắt thì kéo thả bình thường; đồng thời sửa lỗi các nút hành động bị chồng chữ ở trang Lịch đã xếp.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã thêm toggle "Khóa NV OFF" cạnh "Kiểm tra ràng buộc", lưu trạng thái bằng localStorage và gửi trạng thái toggle khi lưu kéo thả; đồng thời chỉnh layout nút "Mở & chỉnh sửa / Kiểm tra / Excel" để không còn overlap.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Phản hồi tiếp: action ở Lịch đã xếp vẫn overlap và phần chữ ca bên Nhóm / Ca còn nhỏ, chưa nhìn ngang hàng với các nhân viên đã xếp.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã sửa lại lần nữa: chuyển chữ ca sang dạng chip rõ ràng, tăng cỡ/nhịp chữ và căn lại flow. Đồng thời tăng cột action, chống co nút và ép nút 1 dòng để loại bỏ overlap triệt để.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Vẫn còn lỗi thực tế: chữ ca nhìn nhỏ/chưa ngang hàng và nút ở trang Lịch đã xếp tiếp tục bị overlap theo ảnh chụp.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã hotfix: render ca bằng card `the-nv ca-chip` và refactor cột hành động sang `colgroup + grid 3 nút` để cố định bố cục, chống co/chồng chữ.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu tiếp: canh toàn bộ hàng nhân viên đầu tiên ngang với label chi nhánh và cho nền các ca trùng 100% màu của từng chi nhánh.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã triển khai: tách lane label rõ cho mọi nhóm/chi nhánh, đẩy phần ca xuống dưới và đổi `ca-chip` sang nền transparent để trùng màu hàng chi nhánh 100%.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Báo lại: tên nhân viên ở các nhóm 326TTV, 197LT5, 796ADV, Chích ngoài, Phụ Spa vẫn chưa ngang hàng với giờ ca, đang bị lệch lên trên 1 dòng.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã fix CSS theo lane đồng bộ: thêm biến `--lane-nhom-ca` ở bảng lịch và áp `padding-top` cùng giá trị cho ô nhân viên (`.o-lich`) để card nhân viên đầu tiên ngang hàng với ca đầu tiên trên mọi nhóm.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu tiếp: nút Khóa OFF chỉ được khóa nhân viên OFF đã chủ động đăng ký ở trang Ngày nghỉ; OFF do thuật toán hoặc kéo tay vẫn phải di chuyển bình thường.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã siết logic khóa OFF theo nguồn user: backend chỉ coi là khóa khi có bản ghi `ngay_nghi` trạng thái OFF và nguồn `user`; bổ sung cột `ngay_nghi.nguon` (migrate an toàn lúc startup, backfill dữ liệu null về `user`).</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Ý tưởng mới: khi bấm Xếp lịch thì nhân viên đăng ký nghỉ vào OFF; nhân viên không được thuật toán phân công thì đưa vào Chưa xếp để tự duyệt tay.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã cập nhật solver theo rule này: OFF chỉ chứa đăng ký nghỉ, các nhân sự chưa được phân công sẽ vào CHUA_XEP. Đồng thời thêm bước normalize để nếu phát sinh OFF không thuộc đăng ký nghỉ thì tự chuyển về CHUA_XEP ngay lúc tạo lịch.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu thêm nút "Tự xếp lịch": khi bấm thì NV đăng ký OFF vào OFF, còn lại vào Chưa xếp để tự kéo thả phân công.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã thêm nút `Tự xếp lịch` cạnh `XẾP LỊCH`, route `/tu-xep-lich` và hàm tạo lịch manual-first: giữ OFF theo đăng ký nghỉ, còn lại đổ về CHUA_XEP để người dùng tự duyệt/xếp tay.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Giữ logic hiện tại, chỉ cần chỉnh nút Tự xếp lịch: kích thước bằng nút Xếp lịch và nền xanh lá cây đậm.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã đổi nút `Tự xếp lịch` sang cùng style/kích thước với `XẾP LỊCH` và áp màu nền xanh lá đậm để dễ nhận diện thao tác manual-first.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu thêm ở trang Lịch đã xếp: cho phép xóa lịch cũ và đổi tên lịch đã xếp.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã thêm quản lý lịch nâng cao: bổ sung cột `ten_lich` cho `lich_tuan`, migration/backfill tự động, form đổi tên inline từng lịch và nút xóa lịch (kèm confirm) ngay trong bảng Lịch đã xếp.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu thêm phần SPA OFF dưới Chưa xếp, tách khỏi bảng lịch; mỗi ngày có một textbox để ghi chú và không cần lưu DB/lưu lại.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã thêm block `SPA OFF` tách biệt bên dưới bảng lịch với 1 textarea cho mỗi ngày. Textarea hỗ trợ xuống dòng (Enter) và chỉ dùng tạm thời trên UI, không gửi backend và không lưu trữ.</p>
+      </div>
+    </div>
+  </section>
+{% endblock %}
