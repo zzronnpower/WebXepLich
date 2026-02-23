@@ -95,16 +95,18 @@
   </section>
 
   <section class="khung">
-    <div class="tieu-de-hang">
-      <h2>Bảng lịch hiển thị</h2>
-      {% if lich %}
+    {% if lich %}
+      <div class="thanh-hanh-dong-lich">
         <a class="nut-phu" href="/lich-da-xep">Quản lý lịch đã xếp</a>
         <a class="nut-phu" href="/tai-excel?lich_tuan_id={{ lich.lich_tuan.id }}">Tải Excel</a>
         <a class="nut-phu" href="/kiem-tra?lich_tuan_id={{ lich.lich_tuan.id }}">Kiểm tra ràng buộc</a>
         <button class="nut-phu" type="button" id="toggle-khoa-off">Khóa NV OFF: BẬT</button>
         <button class="nut-phu" type="button" id="toggle-to-sang">Tắt tô sáng</button>
         <button class="nut-phu" type="button" id="luu-keo-tha" data-lich-tuan-id="{{ lich.lich_tuan.id }}">Lưu kéo thả</button>
-      {% endif %}
+      </div>
+    {% endif %}
+    <div class="tieu-de-hang">
+      <h2>Bảng xếp lịch làm việc Phòng Khám Thú Y Cún Miu</h2>
     </div>
     {% if lich %}
       <div id="thong-bao-keo-tha" class="canh-bao" style="display: none;"></div>

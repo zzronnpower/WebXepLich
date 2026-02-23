@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block noi_dung %}
-  <section class="khung">
+  <section class="khung chatlog-conv">
     <div class="tieu-de-hang">
       <h2>ChatLog</h2>
       <span class="goi-y">Lưu lịch sử trao đổi và thay đổi đã triển khai.</span>
@@ -109,6 +109,54 @@
       <div class="the">
         <div class="goi-y">Assistant</div>
         <p>Đã thêm block `SPA OFF` tách biệt bên dưới bảng lịch với 1 textarea cho mỗi ngày. Textarea hỗ trợ xuống dòng (Enter) và chỉ dùng tạm thời trên UI, không gửi backend và không lưu trữ.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Báo lỗi kiểm tra ràng buộc sau khi kéo-thả ở lịch tự xếp: hệ thống vẫn báo thiếu hàng loạt dù đã dịch chuyển nhân sự xuống đúng dòng ca.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã fix logic lưu kéo-thả: với nhóm chi nhánh (không phải OFF/PHU_SPA/CHUA_XEP), hệ thống map `thu_tu` -> ca theo cấu hình nhóm và gán lại `ca_id` + `chi_nhanh_id` ngay khi lưu. Nhờ đó kiểm tra ràng buộc đọc đúng phân ca thực tế sau khi kéo-thả từ lịch tự xếp.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu UI: tách toàn bộ cụm nút thao tác lịch (quản lý, excel, kiểm tra, toggle, lưu kéo thả) lên phía trên phần tiêu đề Bảng lịch hiển thị.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã tách cụm action thành thanh riêng `thanh-hanh-dong-lich` nằm trên tiêu đề `Bảng lịch hiển thị`, giữ nguyên id/nút để không ảnh hưởng logic JS hiện tại.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu tiếp: đổi ChatLog sang kiểu conversation như dự án Boktoshi, đổi tiêu đề bảng lịch dài hơn theo tên phòng khám, và các nút action cho chữ đậm + nền hồng nhạt.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã cập nhật UI theo yêu cầu: ChatLog hiển thị dạng hội thoại bong bóng (user/assistant), tiêu đề bảng lịch đổi thành "Bảng xếp lịch làm việc Phòng Khám Thú Y Cún Miu", và cụm nút action lịch được tô nền hồng nhạt với chữ đậm để dễ nhìn.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu chỉnh lại màu toolbar action: đổi nền nút từ hồng nhạt sang vàng nhạt vì nhìn phù hợp giao diện hơn.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã đổi màu nền cụm nút action sang vàng nhạt, đồng thời chỉnh màu viền/chữ/hover tương ứng để giữ độ tương phản và dễ đọc.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu chỉnh typography: giảm cỡ chữ giờ làm việc, đặt chính xác 16.5px để cân với tên nhân viên.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã giảm font-size phần giờ ca (`.ca-chip`) từ 18px xuống 16.5px theo yêu cầu để giữ tỷ lệ gần với chữ tên nhân viên.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu chỉnh khoảng cách giữa các dòng giờ làm việc từ 8 xuống 7 để nhìn sát hơn một chút.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã cập nhật khoảng cách dọc các dòng giờ ca trong cột Nhóm/Ca: `gap` của `.ds-ca` từ `8px` xuống `7px`.</p>
       </div>
     </div>
   </section>

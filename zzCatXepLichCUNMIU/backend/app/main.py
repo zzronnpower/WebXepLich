@@ -512,6 +512,16 @@ async def cap_nhat_lich(request: Request, phien: Session = Depends(lay_phien_lam
         nhom_map = {nhom.id: nhom for nhom in nhom_list}
         off_nhom_ids = {nhom.id for nhom in nhom_list if la_nhom_off(nhom.ten_nhom)}
         nhom_tu_do_ids = {nhom.id for nhom in nhom_list if nhom.ten_nhom in {"PHU_SPA", "CHUA_XEP"}}
+        ca_theo_ten = {ca.ten_ca: ca.id for ca in phien.query(models.CaLam).all()}
+        ca_theo_nhom_ten = danh_sach_ca_theo_nhom()
+        ca_theo_nhom_thu_tu = {}
+        for nhom in nhom_list:
+            ds_ten_ca = ca_theo_nhom_ten.get(nhom.ten_nhom, [])
+            ca_theo_nhom_thu_tu[nhom.id] = {
+                idx + 1: ca_theo_ten[ten_ca]
+                for idx, ten_ca in enumerate(ds_ten_ca)
+                if ten_ca in ca_theo_ten
+            }
         mapping_list = phien.query(models.MappingNhom).all()
         mapping_map = {(m.nhom_hien_thi_id, m.ca_id): m.chi_nhanh_id for m in mapping_list}
         ngay_set = {ct.ngay for ct in lich_ct}
@@ -561,17 +571,24 @@ async def cap_nhat_lich(request: Request, phien: Session = Depends(lay_phien_lam
                 du_kien[lich_id]["chi_nhanh_id"] = None
                 du_kien[lich_id]["ca_id"] = None
                 continue
-            ca_id = du_kien[lich_id]["ca_id"]
-            if ca_id:
-                chi_nhanh_id = mapping_map.get((nhom_id, ca_id))
-                if (nhom_id, ca_id) not in mapping_map:
-                    nhom_obj = nhom_map.get(nhom_id)
-                    nhom_ten = nhom_obj.ten_nhom if nhom_obj else ""
-                    return {
-                        "ok": False,
-                        "message": f"Không có mapping chi nhánh cho nhóm {nhom_ten}.",
-                    }
-                du_kien[lich_id]["chi_nhanh_id"] = chi_nhanh_id
+            ca_id = ca_theo_nhom_thu_tu.get(nhom_id, {}).get(thu_tu_moi)
+            if not ca_id:
+                nhom_obj = nhom_map.get(nhom_id)
+                nhom_ten = nhom_obj.ten_nhom if nhom_obj else ""
+                return {
+                    "ok": False,
+                    "message": f"Vị trí dòng {thu_tu_moi} không khớp ca hợp lệ cho nhóm {nhom_ten}.",
+                }
+            chi_nhanh_id = mapping_map.get((nhom_id, ca_id))
+            if (nhom_id, ca_id) not in mapping_map:
+                nhom_obj = nhom_map.get(nhom_id)
+                nhom_ten = nhom_obj.ten_nhom if nhom_obj else ""
+                return {
+                    "ok": False,
+                    "message": f"Không có mapping chi nhánh cho nhóm {nhom_ten}.",
+                }
+            du_kien[lich_id]["ca_id"] = ca_id
+            du_kien[lich_id]["chi_nhanh_id"] = chi_nhanh_id
 
         dem_trung = {}
         for info in du_kien.values():

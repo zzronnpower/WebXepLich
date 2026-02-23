@@ -221,3 +221,48 @@ This will wipe existing data and re-seed the updated dataset.
   - no DB write,
   - no localStorage save,
   - content is temporary and resets on page reload.
+
+## Latest Update (2026-02-23, drag-save shift mapping fix for TU_XEP)
+
+- Fixed a critical mismatch between drag-drop UI and constraint validation in manual-first schedules (`TU_XEP`):
+  - Root-cause: after drag-drop, rows in branch groups updated only `nhom_hien_thi_id`/`thu_tu` while `ca_id` and `chi_nhanh_id` could remain null.
+  - Impact: `kiem_tra_lich` counted assignments by `(ngay, ca_id, chi_nhanh_id)` and reported mass false shortages.
+- Implemented save-time remapping in `/cap-nhat-lich`:
+  - For non-free groups, map `thu_tu` to shift (`ca_id`) using configured `danh_sach_ca_theo_nhom` order.
+  - Resolve `chi_nhanh_id` from `(nhom_hien_thi_id, ca_id)` via `mapping_nhom`.
+  - Persist both `ca_id` and `chi_nhanh_id` immediately so validation reads real assignment state.
+
+## Latest Update (2026-02-23, schedule action toolbar placement)
+
+- Moved all schedule action controls into a separate toolbar above the `Bảng lịch hiển thị` title:
+  - `Quản lý lịch đã xếp`, `Tải Excel`, `Kiểm tra ràng buộc`, `Khóa NV OFF`, `Tắt tô sáng`, `Lưu kéo thả`.
+- Added dedicated layout class `thanh-hanh-dong-lich` (flex-wrap + spacing) to keep controls detached and cleaner from the table heading area.
+- Kept button ids and existing JS behavior unchanged, so interaction logic remains stable.
+
+## Latest Update (2026-02-23, conversation-style chatlog + header polish)
+
+- Updated chat history page to conversation-style layout similar to Boktoshi:
+  - Replaced tile-grid feel with vertical chat bubbles.
+  - Alternating bubble alignment/colors for User vs Assistant for better readability.
+  - Preserved existing transcript content; only presentation changed.
+- Updated home schedule section title to:
+  - `Bảng xếp lịch làm việc Phòng Khám Thú Y Cún Miu`.
+- Updated schedule action toolbar button visual:
+  - Light pink background + bold text for stronger visual emphasis.
+
+## Latest Update (2026-02-23, toolbar color adjustment)
+
+- Adjusted schedule action toolbar button theme from light pink to light yellow based on UX preference.
+- Updated paired border/text/hover colors to keep contrast readable on the existing page background.
+
+## Latest Update (2026-02-23, shift label typography fine-tune)
+
+- Adjusted shift-time label font size in schedule left column:
+  - `.ca-chip` font-size changed from `18px` to `16.5px`.
+- Goal: keep shift text visually closer to employee name size and reduce oversized appearance.
+
+## Latest Update (2026-02-23, shift row spacing fine-tune)
+
+- Adjusted vertical spacing between shift-time rows in left column:
+  - `.ds-ca` `gap` changed from `8px` to `7px`.
+- Goal: tighten spacing slightly while keeping readability.

@@ -249,4 +249,11 @@ Ví dụ flow nút “Xếp lịch”:
 - Khi có hai nút hành động chính song song trên cùng form (ví dụ `XẾP LỊCH` và `Tự xếp lịch`), giữ cùng kích thước để cân bằng bố cục; dùng màu nền khác biệt để phân vai thao tác.
 - Trang `Lịch đã xếp` phải hỗ trợ quản trị vòng đời lịch: đổi tên (`ten_lich`) và xóa lịch cũ trực tiếp theo từng dòng, có xác nhận trước khi xóa.
 - Khu ghi chú điều phối tạm (như `SPA OFF`) phải tách biệt khỏi bảng chính, dùng textarea nhiều dòng và mặc định không lưu (không DB, không cache) trừ khi user yêu cầu rõ cơ chế persistence.
+- Với lịch `TU_XEP`, sau mỗi lần lưu kéo-thả phải chuẩn hóa `ca_id`/`chi_nhanh_id` theo `thu_tu` dòng và mapping nhóm; nếu không, kiểm tra ràng buộc sẽ báo thiếu ảo dù UI đã sắp đúng.
+- Cụm nút thao tác lịch nên đặt thành toolbar tách riêng phía trên tiêu đề bảng để tránh dồn chỗ trong header và giữ vùng bảng dễ đọc.
+- Trang ChatLog ưu tiên hiển thị theo kiểu conversation (bubble User/Assistant, căn trái-phải rõ ràng), tránh layout card-grid gây khó theo dõi mạch hội thoại.
+- Với toolbar thao tác lịch, có thể dùng màu nhấn riêng (ví dụ nền hồng nhạt + chữ đậm) khi user yêu cầu tăng độ nổi bật; giữ nguyên id/nút để không ảnh hưởng JS.
+- Với tinh chỉnh màu toolbar thao tác lịch, ưu tiên tone sáng trung tính (ví dụ vàng nhạt) nếu màu nhấn hiện tại gây lệch tổng thể giao diện.
+- Với tinh chỉnh typography bảng lịch, hỗ trợ chỉnh theo giá trị px cụ thể user yêu cầu (ví dụ 16.5px) để chốt đúng tỷ lệ thị giác.
+- Với tinh chỉnh nhịp dọc cột giờ ca, cho phép chỉnh `gap` rất nhỏ (ví dụ 8px -> 7px) để đạt mật độ hiển thị user mong muốn.
 - Nếu user báo "đã sửa nhưng giao diện chưa đổi", ưu tiên xác nhận lại bằng `docker compose up -d --build` và yêu cầu hard refresh để loại trừ cache/container cũ.

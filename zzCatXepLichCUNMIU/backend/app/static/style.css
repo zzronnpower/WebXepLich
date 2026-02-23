@@ -389,6 +389,62 @@ textarea {
   transform: translateY(-5px);
 }
 
+.thanh-hanh-dong-lich {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.thanh-hanh-dong-lich .nut-phu {
+  font-weight: 700;
+  background: #f7efc9;
+  border-color: #e2d29a;
+  color: #5a4a20;
+}
+
+.thanh-hanh-dong-lich .nut-phu:hover {
+  background: #f2e4ae;
+}
+
+.chatlog-conv .luoi-2 {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chatlog-conv .the {
+  max-width: 92%;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+}
+
+.chatlog-conv .the:nth-child(odd) {
+  align-self: flex-start;
+  background: linear-gradient(180deg, #23385a 0%, #1a2a46 100%);
+}
+
+.chatlog-conv .the:nth-child(even) {
+  align-self: flex-end;
+  background: linear-gradient(180deg, #1b4634 0%, #16392b 100%);
+}
+
+.chatlog-conv .the .goi-y {
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  font-size: 12px;
+  color: #d7e6ff;
+  margin-bottom: 8px;
+}
+
+.chatlog-conv .the p {
+  margin: 0;
+  white-space: pre-wrap;
+  color: #eef5ff;
+  line-height: 1.5;
+}
+
 .bang-lich {
   --lane-nhom-ca: 56px;
   overflow-x: auto;
@@ -600,7 +656,7 @@ th {
   line-height: 1.45;
   font-weight: 500;
   display: grid;
-  gap: 8px;
+  gap: 5px;
   margin-top: 8px;
 }
 
@@ -614,7 +670,7 @@ th {
   display: flex;
   align-items: center;
   font-weight: 600;
-  font-size: 18px;
+  font-size: 16.5px;
   line-height: 1;
   color: #2e3649;
   box-shadow: none;
