@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+import json
 import time
 from io import BytesIO
 
@@ -41,6 +42,7 @@ def khoi_tao():
                 dam_bao_cot_thu_tu(phien)
                 dam_bao_cot_ngay_nghi_nguon(phien)
                 dam_bao_cot_ten_lich(phien)
+                dam_bao_cot_spa_off_ghi_chu(phien)
                 dam_bao_trong_so(phien)
             return
         except Exception:
@@ -53,6 +55,7 @@ def khoi_tao():
         dam_bao_cot_thu_tu(phien)
         dam_bao_cot_ngay_nghi_nguon(phien)
         dam_bao_cot_ten_lich(phien)
+        dam_bao_cot_spa_off_ghi_chu(phien)
         dam_bao_trong_so(phien)
 
 
@@ -102,6 +105,14 @@ def dinh_dang_ngay(ngay: date) -> str:
     return ngay.strftime("%d/%m/%Y")
 
 
+def lay_thu_hai_tiep_theo(ngay_hien_tai: date | None = None) -> date:
+    ngay_goc = ngay_hien_tai or date.today()
+    so_ngay_con_lai = (7 - ngay_goc.weekday()) % 7
+    if so_ngay_con_lai == 0:
+        so_ngay_con_lai = 7
+    return ngay_goc + timedelta(days=so_ngay_con_lai)
+
+
 def tao_ma_nv(phien: Session) -> str:
     max_id = phien.query(func.max(models.NhanVien.id)).scalar() or 0
     return f"BS{max_id + 1:02d}"
@@ -127,6 +138,29 @@ def danh_sach_ca_theo_nhom() -> dict[str, list[str]]:
         "OFF": ["Nghỉ"],
         "CHUA_XEP": ["Chưa xếp"],
     }
+
+
+def tao_ca_ids_theo_nhom(phien: Session, nhom_list: list[models.NhomHienThi]) -> dict[int, list[int]]:
+    ca_theo_ten = {ca.ten_ca: ca.id for ca in phien.query(models.CaLam).all()}
+    ca_theo_nhom_ten = danh_sach_ca_theo_nhom()
+    ket_qua: dict[int, list[int]] = {}
+    for nhom in nhom_list:
+        ds_ten_ca = ca_theo_nhom_ten.get(nhom.ten_nhom, [])
+        ket_qua[nhom.id] = [ca_theo_ten[ten_ca] for ten_ca in ds_ten_ca if ten_ca in ca_theo_ten]
+    return ket_qua
+
+
+def ca_id_theo_thu_tu(ds_ca_id: list[int], thu_tu: int) -> int | None:
+    if thu_tu < 1:
+        return None
+    vi_tri_ca = (thu_tu - 1) // 2
+    if vi_tri_ca >= len(ds_ca_id):
+        return None
+    return ds_ca_id[vi_tri_ca]
+
+
+def tao_ca_theo_ten(phien: Session) -> dict[str, int]:
+    return {ca.ten_ca: ca.id for ca in phien.query(models.CaLam).all()}
 
 
 def la_nhom_off(ten_nhom: str | None) -> bool:
@@ -207,6 +241,14 @@ def dam_bao_cot_ten_lich(phien: Session):
         phien.rollback()
 
 
+def dam_bao_cot_spa_off_ghi_chu(phien: Session):
+    try:
+        phien.execute(text("ALTER TABLE lich_tuan ADD COLUMN IF NOT EXISTS spa_off_ghi_chu TEXT"))
+        phien.commit()
+    except Exception:
+        phien.rollback()
+
+
 def dam_bao_trong_so(phien: Session):
     crud.tao_hoac_cap_nhat_trong_so(phien, "khong_di_chich_ngoai", 6)
 
@@ -244,6 +286,7 @@ def lay_lich_hien_thi(phien: Session, lich_tuan_id: int | None):
         key=lambda n: (THU_TU_NHOM_MAC_DINH.get(n.ten_nhom, 999), n.id),
     )
     ngay_list = danh_sach_ngay_trong_tuan(lich_tuan.ngay_bat_dau)
+    ca_ids_theo_nhom = tao_ca_ids_theo_nhom(phien, nhom_list)
     ngay_nghi_set = {
         (nn.nhan_vien_id, nn.ngay)
         for nn in (
@@ -261,20 +304,36 @@ def lay_lich_hien_thi(phien: Session, lich_tuan_id: int | None):
         .order_by(models.LichChiTiet.ngay.asc(), models.LichChiTiet.nhom_hien_thi_id.asc(), models.LichChiTiet.thu_tu.asc(), models.LichChiTiet.id.asc())
         .all()
     )
+    spa_off_theo_ngay = {ngay: "" for ngay in ngay_list}
+    if lich_tuan.spa_off_ghi_chu:
+        try:
+            spa_off_raw = json.loads(lich_tuan.spa_off_ghi_chu)
+            if isinstance(spa_off_raw, dict):
+                for ngay in ngay_list:
+                    gia_tri = spa_off_raw.get(ngay.isoformat())
+                    if isinstance(gia_tri, str):
+                        spa_off_theo_ngay[ngay] = gia_tri
+        except Exception:
+            pass
     bang = {
         nhom.id: {ngay: [] for ngay in ngay_list}
         for nhom in nhom_list
     }
     nhom_off_id = next((n.id for n in nhom_list if la_nhom_off(n.ten_nhom)), None)
+    nhom_tu_do_ids = {n.id for n in nhom_list if n.ten_nhom in {"PHU_SPA", "CHUA_XEP"}}
     for ct in lich_ct:
         if ct.nhom_hien_thi_id not in bang:
             continue
+        ca_id_hien_thi = ct.ca_id
+        if not ca_id_hien_thi and ct.nhom_hien_thi_id not in nhom_tu_do_ids and ct.nhom_hien_thi_id != nhom_off_id:
+            ca_id_hien_thi = ca_id_theo_thu_tu(ca_ids_theo_nhom.get(ct.nhom_hien_thi_id, []), int(ct.thu_tu or 0))
         la_ngay_nghi_khoa = bool(nhom_off_id and ct.nhom_hien_thi_id == nhom_off_id and (ct.nhan_vien_id, ct.ngay) in ngay_nghi_set)
         bang[ct.nhom_hien_thi_id][ct.ngay].append(
             {
                 "id": ct.id,
                 "ten_nv": ct.nhan_vien.ten_nv,
                 "nhan_vien_id": ct.nhan_vien_id,
+                "ca_id": ca_id_hien_thi,
                 "cap_do": ct.nhan_vien.cap_do,
                 "thu_tu": int(ct.thu_tu or 0),
                 "khoa_keo_tha": la_ngay_nghi_khoa,
@@ -286,6 +345,7 @@ def lay_lich_hien_thi(phien: Session, lich_tuan_id: int | None):
         "nhom_list": nhom_list,
         "ngay_list": ngay_list,
         "bang": bang,
+        "spa_off_theo_ngay": spa_off_theo_ngay,
     }
 
 
@@ -307,15 +367,7 @@ def kiem_tra_lich(phien: Session, lich_tuan_id: int | None):
         return None
 
     ngay_list = danh_sach_ngay_trong_tuan(lich_tuan.ngay_bat_dau)
-    nhu_cau = (
-        phien.query(models.NhuCauCa)
-        .filter(models.NhuCauCa.ngay >= ngay_list[0])
-        .filter(models.NhuCauCa.ngay <= ngay_list[-1])
-        .all()
-    )
-    trong_so = lay_trong_so(phien)
-    if trong_so.get("bat_buoc_chich_ngoai", 0) > 0:
-        nhu_cau = list(nhu_cau) + tao_nhu_cau_chich_ngoai(phien, ngay_list)
+    ca_map = {ca.id: ca for ca in phien.query(models.CaLam).all()}
     lich_ct = (
         phien.query(models.LichChiTiet)
         .filter(models.LichChiTiet.lich_tuan_id == lich_tuan.id)
@@ -329,17 +381,15 @@ def kiem_tra_lich(phien: Session, lich_tuan_id: int | None):
 
     errors = []
     warnings = []
-    for nc in nhu_cau:
-        key = (nc.ngay, nc.ca_id, nc.chi_nhanh_id)
-        da_xep = dem_lich.get(key, 0)
-        if da_xep < nc.so_nguoi_can:
-            ten_chi_nhanh = nc.chi_nhanh.ten_chi_nhanh if nc.chi_nhanh else "Chích ngoài"
-            ten_ca = nc.ca_lam.ten_ca if nc.ca_lam else ""
-            errors.append(
-                f"Thiếu {nc.so_nguoi_can - da_xep} người: {ten_chi_nhanh} {dinh_dang_ngay(nc.ngay)} ca {ten_ca}"
-            )
+    chi_nhanh_map = {cn.id: cn for cn in phien.query(models.ChiNhanh).all()}
+    for key, so_nv in dem_lich.items():
+        ngay, ca_id, chi_nhanh_id = key
+        if not ca_id or so_nv <= 2:
+            continue
+        ten_chi_nhanh = chi_nhanh_map[chi_nhanh_id].ten_chi_nhanh if chi_nhanh_id in chi_nhanh_map else "Chích ngoài"
+        ten_ca = ca_map[ca_id].ten_ca if ca_id in ca_map else ""
+        errors.append(f"Quá 2 người/ca: {ten_chi_nhanh} {dinh_dang_ngay(ngay)} ca {ten_ca} ({so_nv} người)")
 
-    ca_map = {ca.id: ca for ca in phien.query(models.CaLam).all()}
     gio_nv = {}
     ca_trong_ngay = {}
     for ct in lich_ct:
@@ -413,12 +463,12 @@ def trang_chu(
     phien: Session = Depends(lay_phien_lam_viec),
 ):
     du_lieu_lich = lay_lich_hien_thi(phien, lich_tuan_id)
-    if du_lieu_lich:
-        ngay_mac_dinh = du_lieu_lich["lich_tuan"].ngay_bat_dau
-    elif ngay_bat_dau:
+    if ngay_bat_dau:
         ngay_mac_dinh = ngay_bat_dau
+    elif lich_tuan_id and du_lieu_lich:
+        ngay_mac_dinh = du_lieu_lich["lich_tuan"].ngay_bat_dau
     else:
-        ngay_mac_dinh = date.today()
+        ngay_mac_dinh = lay_thu_hai_tiep_theo()
     ds_nhan_vien = phien.query(models.NhanVien).order_by(models.NhanVien.ten_nv).all()
     ngay_list_nghi, ngay_nghi_theo_ngay = tai_du_lieu_ngay_nghi(phien, ngay_mac_dinh)
     return giao_dien.TemplateResponse(
@@ -428,6 +478,7 @@ def trang_chu(
             "lich": du_lieu_lich,
             "ds_lich_tuan": danh_sach_lich_tuan(phien),
             "danh_sach_ca_nhom": danh_sach_ca_theo_nhom(),
+            "ca_theo_ten": tao_ca_theo_ten(phien),
             "ten_thu": ten_thu,
             "ten_nhom_hien_thi": ten_nhom_hien_thi,
             "ngay_mac_dinh": ngay_mac_dinh,
@@ -462,6 +513,21 @@ async def doi_ten_lich_da_xep(
         if ten_lich:
             lich.ten_lich = ten_lich
             phien.commit()
+    return RedirectResponse(url="/lich-da-xep", status_code=303)
+
+
+@ung_dung.post("/lich-da-xep/{lich_tuan_id}/ghi-chu")
+async def cap_nhat_ghi_chu_lich_da_xep(
+    lich_tuan_id: int,
+    request: Request,
+    phien: Session = Depends(lay_phien_lam_viec),
+):
+    lich = phien.query(models.LichTuan).filter(models.LichTuan.id == lich_tuan_id).first()
+    if lich:
+        form = await request.form()
+        ghi_chu = (form.get("ghi_chu") or "").strip()
+        lich.ghi_chu = ghi_chu if ghi_chu else None
+        phien.commit()
     return RedirectResponse(url="/lich-da-xep", status_code=303)
 
 
@@ -500,8 +566,15 @@ async def cap_nhat_lich(request: Request, phien: Session = Depends(lay_phien_lam
         lich_tuan_id = payload.get("lich_tuan_id")
         khoa_nv_off = bool(payload.get("khoa_nv_off", True))
         changes = payload.get("changes", [])
-        if not lich_tuan_id or not changes:
+        spa_off_notes = payload.get("spa_off_notes") or {}
+        if not lich_tuan_id:
             return {"ok": False, "message": "Không có thay đổi."}
+        if not changes and not spa_off_notes:
+            return {"ok": False, "message": "Không có thay đổi."}
+
+        lich_tuan = phien.query(models.LichTuan).filter(models.LichTuan.id == lich_tuan_id).first()
+        if not lich_tuan:
+            return {"ok": False, "message": "Không tìm thấy lịch tuần."}
 
         lich_ct = (
             phien.query(models.LichChiTiet)
@@ -512,16 +585,7 @@ async def cap_nhat_lich(request: Request, phien: Session = Depends(lay_phien_lam
         nhom_map = {nhom.id: nhom for nhom in nhom_list}
         off_nhom_ids = {nhom.id for nhom in nhom_list if la_nhom_off(nhom.ten_nhom)}
         nhom_tu_do_ids = {nhom.id for nhom in nhom_list if nhom.ten_nhom in {"PHU_SPA", "CHUA_XEP"}}
-        ca_theo_ten = {ca.ten_ca: ca.id for ca in phien.query(models.CaLam).all()}
-        ca_theo_nhom_ten = danh_sach_ca_theo_nhom()
-        ca_theo_nhom_thu_tu = {}
-        for nhom in nhom_list:
-            ds_ten_ca = ca_theo_nhom_ten.get(nhom.ten_nhom, [])
-            ca_theo_nhom_thu_tu[nhom.id] = {
-                idx + 1: ca_theo_ten[ten_ca]
-                for idx, ten_ca in enumerate(ds_ten_ca)
-                if ten_ca in ca_theo_ten
-            }
+        ca_ids_theo_nhom = tao_ca_ids_theo_nhom(phien, nhom_list)
         mapping_list = phien.query(models.MappingNhom).all()
         mapping_map = {(m.nhom_hien_thi_id, m.ca_id): m.chi_nhanh_id for m in mapping_list}
         ngay_set = {ct.ngay for ct in lich_ct}
@@ -571,13 +635,21 @@ async def cap_nhat_lich(request: Request, phien: Session = Depends(lay_phien_lam
                 du_kien[lich_id]["chi_nhanh_id"] = None
                 du_kien[lich_id]["ca_id"] = None
                 continue
-            ca_id = ca_theo_nhom_thu_tu.get(nhom_id, {}).get(thu_tu_moi)
+            ca_id_payload = item.get("ca_id")
+            ca_id = int(ca_id_payload) if ca_id_payload else ca_id_theo_thu_tu(ca_ids_theo_nhom.get(nhom_id, []), thu_tu_moi)
+            if ca_id and ca_id not in set(ca_ids_theo_nhom.get(nhom_id, [])):
+                nhom_obj = nhom_map.get(nhom_id)
+                nhom_ten = nhom_obj.ten_nhom if nhom_obj else ""
+                return {
+                    "ok": False,
+                    "message": f"Ca không hợp lệ cho nhóm {nhom_ten}.",
+                }
             if not ca_id:
                 nhom_obj = nhom_map.get(nhom_id)
                 nhom_ten = nhom_obj.ten_nhom if nhom_obj else ""
                 return {
                     "ok": False,
-                    "message": f"Vị trí dòng {thu_tu_moi} không khớp ca hợp lệ cho nhóm {nhom_ten}.",
+                    "message": f"Vị trí dòng {thu_tu_moi} vượt giới hạn 2 người/ca cho nhóm {nhom_ten}.",
                 }
             chi_nhanh_id = mapping_map.get((nhom_id, ca_id))
             if (nhom_id, ca_id) not in mapping_map:
@@ -590,6 +662,57 @@ async def cap_nhat_lich(request: Request, phien: Session = Depends(lay_phien_lam
             du_kien[lich_id]["ca_id"] = ca_id
             du_kien[lich_id]["chi_nhanh_id"] = chi_nhanh_id
 
+        for lich_id, info in du_kien.items():
+            nhom_id = int(info.get("nhom_hien_thi_id") or 0)
+            thu_tu = int(info.get("thu_tu") or 0)
+            if nhom_id in off_nhom_ids or nhom_id in nhom_tu_do_ids:
+                info["chi_nhanh_id"] = None
+                info["ca_id"] = None
+                continue
+            ca_id = int(info.get("ca_id") or 0) or ca_id_theo_thu_tu(ca_ids_theo_nhom.get(nhom_id, []), thu_tu)
+            if not ca_id:
+                nhom_obj = nhom_map.get(nhom_id)
+                nhom_ten = nhom_obj.ten_nhom if nhom_obj else ""
+                return {
+                    "ok": False,
+                    "message": f"Vị trí dòng {thu_tu} vượt giới hạn 2 người/ca cho nhóm {nhom_ten}.",
+                }
+            if ca_id not in set(ca_ids_theo_nhom.get(nhom_id, [])):
+                nhom_obj = nhom_map.get(nhom_id)
+                nhom_ten = nhom_obj.ten_nhom if nhom_obj else ""
+                return {
+                    "ok": False,
+                    "message": f"Ca không hợp lệ cho nhóm {nhom_ten}.",
+                }
+            chi_nhanh_id = mapping_map.get((nhom_id, ca_id))
+            if (nhom_id, ca_id) not in mapping_map:
+                nhom_obj = nhom_map.get(nhom_id)
+                nhom_ten = nhom_obj.ten_nhom if nhom_obj else ""
+                return {
+                    "ok": False,
+                    "message": f"Không có mapping chi nhánh cho nhóm {nhom_ten}.",
+                }
+            info["ca_id"] = ca_id
+            info["chi_nhanh_id"] = chi_nhanh_id
+
+        dem_so_nguoi_ca = {}
+        ca_map = {ca.id: ca for ca in phien.query(models.CaLam).all()}
+        for info in du_kien.values():
+            nhom_id = int(info.get("nhom_hien_thi_id") or 0)
+            ca_id = info.get("ca_id")
+            if nhom_id in off_nhom_ids or nhom_id in nhom_tu_do_ids or not ca_id:
+                continue
+            key = (info.get("ngay"), info.get("chi_nhanh_id"), ca_id)
+            dem_so_nguoi_ca[key] = dem_so_nguoi_ca.get(key, 0) + 1
+            if dem_so_nguoi_ca[key] > 2:
+                nhom_obj = nhom_map.get(nhom_id)
+                ten_nhom = ten_nhom_hien_thi(nhom_obj.ten_nhom) if nhom_obj else ""
+                ten_ca = ca_map[ca_id].ten_ca if ca_id in ca_map else ""
+                return {
+                    "ok": False,
+                    "message": f"Ca {ten_ca} của nhóm {ten_nhom} ngày {dinh_dang_ngay(info.get('ngay'))} chỉ tối đa 2 người.",
+                }
+
         dem_trung = {}
         for info in du_kien.values():
             key = (info["nhan_vien_id"], info["ngay"])
@@ -598,7 +721,6 @@ async def cap_nhat_lich(request: Request, phien: Session = Depends(lay_phien_lam
         if bi_trung:
             nv_map = {nv.id: nv for nv in phien.query(models.NhanVien).all()}
             chi_nhanh_map = {cn.id: cn for cn in phien.query(models.ChiNhanh).all()}
-            ca_map = {ca.id: ca for ca in phien.query(models.CaLam).all()}
             danh_sach = []
             for nv_id, ngay in bi_trung:
                 nv = nv_map.get(nv_id)
@@ -644,6 +766,23 @@ async def cap_nhat_lich(request: Request, phien: Session = Depends(lay_phien_lam
             ct.chi_nhanh_id = info["chi_nhanh_id"]
             ct.ca_id = info["ca_id"]
             ct.thu_tu = int(info["thu_tu"] or 0)
+
+        if isinstance(spa_off_notes, dict):
+            ngay_hop_le = set(danh_sach_ngay_trong_tuan(lich_tuan.ngay_bat_dau))
+            spa_off_sach = {}
+            for ngay_raw, noi_dung in spa_off_notes.items():
+                if not isinstance(ngay_raw, str):
+                    continue
+                try:
+                    ngay_obj = datetime.fromisoformat(ngay_raw).date()
+                except ValueError:
+                    continue
+                if ngay_obj not in ngay_hop_le:
+                    continue
+                text_note = noi_dung if isinstance(noi_dung, str) else ""
+                if text_note.strip():
+                    spa_off_sach[ngay_obj.isoformat()] = text_note
+            lich_tuan.spa_off_ghi_chu = json.dumps(spa_off_sach, ensure_ascii=False) if spa_off_sach else None
 
         ngay_nghi_hien_tai = (
             phien.query(models.NgayNghi)
@@ -734,6 +873,7 @@ def xep_lich(
                 "lich": lay_lich_hien_thi(phien, None),
                 "ds_lich_tuan": danh_sach_lich_tuan(phien),
                 "danh_sach_ca_nhom": danh_sach_ca_theo_nhom(),
+                "ca_theo_ten": tao_ca_theo_ten(phien),
                 "ten_thu": ten_thu,
                 "ten_nhom_hien_thi": ten_nhom_hien_thi,
                 "ngay_mac_dinh": ngay_bat_dau,
@@ -764,6 +904,7 @@ def tu_xep_lich(
                 "lich": lay_lich_hien_thi(phien, None),
                 "ds_lich_tuan": danh_sach_lich_tuan(phien),
                 "danh_sach_ca_nhom": danh_sach_ca_theo_nhom(),
+                "ca_theo_ten": tao_ca_theo_ten(phien),
                 "ten_thu": ten_thu,
                 "ten_nhom_hien_thi": ten_nhom_hien_thi,
                 "ngay_mac_dinh": ngay_bat_dau,
@@ -973,7 +1114,8 @@ async def tao_ngay_nghi_nhieu(request: Request, phien: Session = Depends(lay_phi
             ngay_hop_le.append(datetime.fromisoformat(raw).date())
         except ValueError:
             du_lieu_lich = lay_lich_hien_thi(phien, None)
-            ngay_list_nghi, ngay_nghi_theo_ngay = tai_du_lieu_ngay_nghi(phien, date.today())
+            ngay_mac_dinh = lay_thu_hai_tiep_theo()
+            ngay_list_nghi, ngay_nghi_theo_ngay = tai_du_lieu_ngay_nghi(phien, ngay_mac_dinh)
             return giao_dien.TemplateResponse(
                 "index.html",
                 {
@@ -981,9 +1123,10 @@ async def tao_ngay_nghi_nhieu(request: Request, phien: Session = Depends(lay_phi
                     "lich": du_lieu_lich,
                     "ds_lich_tuan": danh_sach_lich_tuan(phien),
                     "danh_sach_ca_nhom": danh_sach_ca_theo_nhom(),
+                    "ca_theo_ten": tao_ca_theo_ten(phien),
                     "ten_thu": ten_thu,
                     "ten_nhom_hien_thi": ten_nhom_hien_thi,
-                    "ngay_mac_dinh": date.today(),
+                    "ngay_mac_dinh": ngay_mac_dinh,
                     "ds_nhan_vien": phien.query(models.NhanVien).order_by(models.NhanVien.ten_nv).all(),
                     "ngay_list_nghi": ngay_list_nghi,
                     "ngay_nghi_theo_ngay": ngay_nghi_theo_ngay,
@@ -992,7 +1135,8 @@ async def tao_ngay_nghi_nhieu(request: Request, phien: Session = Depends(lay_phi
             )
     if not ngay_hop_le:
         du_lieu_lich = lay_lich_hien_thi(phien, None)
-        ngay_list_nghi, ngay_nghi_theo_ngay = tai_du_lieu_ngay_nghi(phien, date.today())
+        ngay_mac_dinh = lay_thu_hai_tiep_theo()
+        ngay_list_nghi, ngay_nghi_theo_ngay = tai_du_lieu_ngay_nghi(phien, ngay_mac_dinh)
         return giao_dien.TemplateResponse(
             "index.html",
             {
@@ -1000,9 +1144,10 @@ async def tao_ngay_nghi_nhieu(request: Request, phien: Session = Depends(lay_phi
                 "lich": du_lieu_lich,
                 "ds_lich_tuan": danh_sach_lich_tuan(phien),
                 "danh_sach_ca_nhom": danh_sach_ca_theo_nhom(),
+                "ca_theo_ten": tao_ca_theo_ten(phien),
                 "ten_thu": ten_thu,
                 "ten_nhom_hien_thi": ten_nhom_hien_thi,
-                "ngay_mac_dinh": date.today(),
+                "ngay_mac_dinh": ngay_mac_dinh,
                 "ds_nhan_vien": phien.query(models.NhanVien).order_by(models.NhanVien.ten_nv).all(),
                 "ngay_list_nghi": ngay_list_nghi,
                 "ngay_nghi_theo_ngay": ngay_nghi_theo_ngay,

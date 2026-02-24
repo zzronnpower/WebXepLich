@@ -178,6 +178,7 @@ class LichTuan(CoSo):
     ngay_ket_thuc = Column(Date, nullable=False)
     trang_thai = Column(String, default="MOI")
     ghi_chu = Column(Text, nullable=True)
+    spa_off_ghi_chu = Column(Text, nullable=True)
 
 
 class LichChiTiet(CoSo):

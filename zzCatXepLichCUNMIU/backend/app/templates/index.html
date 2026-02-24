@@ -109,6 +109,9 @@
       <h2>Bảng xếp lịch làm việc Phòng Khám Thú Y Cún Miu</h2>
     </div>
     {% if lich %}
+      <p class="goi-y">Mỗi ca cho phép tối đa 2 nhân viên. Hãy kéo thả vào đúng khung của từng ca trong ngày để tránh nhảy ca.</p>
+    {% endif %}
+    {% if lich %}
       <div id="thong-bao-keo-tha" class="canh-bao" style="display: none;"></div>
     {% endif %}
     {% if lich %}
@@ -135,18 +138,42 @@
                 </td>
                 {% for ngay in lich.ngay_list %}
                   <td class="o-lich" data-ngay="{{ ngay }}" data-nhom-id="{{ nhom.id }}" data-ten-nhom="{{ nhom.ten_nhom }}">
-                    {% for item in lich.bang[nhom.id][ngay] %}
-                      <div
-                        class="the-nv{% if item.cap_do and ('chính' in item.cap_do|lower or 'bac sy chinh' in item.cap_do|lower) %} the-nv-chinh{% endif %}"
-                        draggable="true"
-                        data-lich-ct-id="{{ item.id }}"
-                        data-ngay="{{ ngay }}"
-                        data-khoa-keo-tha="{{ '1' if item.khoa_keo_tha else '0' }}"
-                        data-thu-tu="{{ item.thu_tu }}"
-                      >
-                        {{ item.ten_nv }}
+                    {% if nhom.ten_nhom in ['OFF', 'PHU_SPA', 'CHUA_XEP'] %}
+                      {% for item in lich.bang[nhom.id][ngay] %}
+                        <div
+                          class="the-nv{% if item.cap_do and ('chính' in item.cap_do|lower or 'bac sy chinh' in item.cap_do|lower) %} the-nv-chinh{% endif %}"
+                          draggable="true"
+                          data-lich-ct-id="{{ item.id }}"
+                          data-ngay="{{ ngay }}"
+                          data-khoa-keo-tha="{{ '1' if item.khoa_keo_tha else '0' }}"
+                          data-thu-tu="{{ item.thu_tu }}"
+                          data-ca-id=""
+                        >
+                          {{ item.ten_nv }}
+                        </div>
+                      {% endfor %}
+                    {% else %}
+                      <div class="ds-ca-lane">
+                        {% for ca in danh_sach_ca_nhom.get(nhom.ten_nhom, []) %}
+                          {% set ca_id = ca_theo_ten.get(ca) %}
+                          <div class="ca-lane" data-ca-id="{{ ca_id }}">
+                            {% for item in lich.bang[nhom.id][ngay] if item.ca_id == ca_id %}
+                              <div
+                                class="the-nv{% if item.cap_do and ('chính' in item.cap_do|lower or 'bac sy chinh' in item.cap_do|lower) %} the-nv-chinh{% endif %}"
+                                draggable="true"
+                                data-lich-ct-id="{{ item.id }}"
+                                data-ngay="{{ ngay }}"
+                                data-khoa-keo-tha="{{ '1' if item.khoa_keo_tha else '0' }}"
+                                data-thu-tu="{{ item.thu_tu }}"
+                                data-ca-id="{{ ca_id }}"
+                              >
+                                {{ item.ten_nv }}
+                              </div>
+                            {% endfor %}
+                          </div>
+                        {% endfor %}
                       </div>
-                    {% endfor %}
+                    {% endif %}
                   </td>
                 {% endfor %}
               </tr>
@@ -173,8 +200,9 @@
                   <td>
                     <textarea
                       class="ghi-chu-spa-off"
+                      data-ngay="{{ ngay.isoformat() }}"
                       placeholder="Ghi chú SPA OFF {{ ten_thu(ngay) }} {{ ngay.strftime('%d/%m') }}"
-                    ></textarea>
+                    >{{ lich.spa_off_theo_ngay.get(ngay, '') if lich.spa_off_theo_ngay else '' }}</textarea>
                   </td>
                 {% endfor %}
               </tr>
@@ -248,7 +276,7 @@
         }
 
         const handleDragEnd = () => {
-          document.querySelectorAll(".o-lich").forEach(cell => {
+          document.querySelectorAll(".o-lich, .ca-lane").forEach(cell => {
             cell.classList.remove("o-lich-hover", "drop-before", "drop-after")
           })
           document.querySelectorAll(".the-nv.dang-keo").forEach(item => item.classList.remove("dang-keo"))
@@ -261,8 +289,16 @@
           return true
         }
 
-        const getDropReference = (cell, event, sourceItem) => {
-          const cards = Array.from(cell.querySelectorAll(".the-nv")).filter(el => el !== sourceItem)
+        const getDropContainer = (event, cell) => {
+          if (!cell) return null
+          const lane = event.target.closest(".ca-lane")
+          const coLane = !!cell.querySelector(".ca-lane")
+          if (coLane) return lane
+          return cell
+        }
+
+        const getDropReference = (container, event, sourceItem) => {
+          const cards = Array.from(container.querySelectorAll(".the-nv")).filter(el => el !== sourceItem)
           let reference = null
           for (const card of cards) {
             const rect = card.getBoundingClientRect()
@@ -275,18 +311,37 @@
           return reference
         }
 
-        const markCellDropDirection = (cell, reference) => {
-          cell.classList.remove("drop-before", "drop-after")
+        const markCellDropDirection = (container, reference) => {
+          container.classList.remove("drop-before", "drop-after")
           if (!reference) {
-            cell.classList.add("drop-after")
+            container.classList.add("drop-after")
             return
           }
-          cell.classList.add("drop-before")
+          container.classList.add("drop-before")
         }
 
         const markCellChanges = cell => {
           const ngay = cell.dataset.ngay
           const nhomId = parseInt(cell.dataset.nhomId, 10)
+          const lanes = Array.from(cell.querySelectorAll(".ca-lane"))
+          if (lanes.length > 0) {
+            lanes.forEach((lane, laneIdx) => {
+              const caId = parseInt(lane.dataset.caId || "0", 10)
+              const cards = Array.from(lane.querySelectorAll(".the-nv"))
+              cards.forEach((card, idx) => {
+                const lichCtId = card.dataset.lichCtId
+                if (!lichCtId) return
+                changes.set(lichCtId, {
+                  id: parseInt(lichCtId, 10),
+                  ngay,
+                  nhom_hien_thi_id: nhomId,
+                  ca_id: caId || null,
+                  thu_tu: laneIdx * 2 + idx + 1,
+                })
+              })
+            })
+            return
+          }
           const cards = Array.from(cell.querySelectorAll(".the-nv"))
           cards.forEach((card, idx) => {
             const lichCtId = card.dataset.lichCtId
@@ -295,6 +350,7 @@
               id: parseInt(lichCtId, 10),
               ngay,
               nhom_hien_thi_id: nhomId,
+              ca_id: null,
               thu_tu: idx + 1,
             })
           })
@@ -304,14 +360,17 @@
           const cell = event.target.closest(".o-lich")
           if (!cell || !draggedItem) return
           if (!validDropCell(cell, draggedItem)) return
+          const container = getDropContainer(event, cell)
+          if (!container) return
           event.preventDefault()
+          event.stopPropagation()
           event.dataTransfer.dropEffect = "move"
-          document.querySelectorAll(".o-lich").forEach(c => {
-            if (c !== cell) c.classList.remove("o-lich-hover", "drop-before", "drop-after")
+          document.querySelectorAll(".o-lich, .ca-lane").forEach(c => {
+            if (c !== container) c.classList.remove("o-lich-hover", "drop-before", "drop-after")
           })
-          cell.classList.add("o-lich-hover")
-          const ref = getDropReference(cell, event, draggedItem)
-          markCellDropDirection(cell, ref)
+          container.classList.add("o-lich-hover")
+          const ref = getDropReference(container, event, draggedItem)
+          markCellDropDirection(container, ref)
         }
 
         const handleDrop = event => {
@@ -319,16 +378,26 @@
           if (!cell) return
           if (!draggedItem) return
           if (!validDropCell(cell, draggedItem)) return
+          const container = getDropContainer(event, cell)
+          if (!container) return
           event.preventDefault()
+          event.stopPropagation()
           const lichCtId = event.dataTransfer.getData("text/plain")
           const item = document.querySelector(`.the-nv[data-lich-ct-id='${lichCtId}']`)
           if (!item) return
+          if (container.classList.contains("ca-lane")) {
+            const cardsInLane = Array.from(container.querySelectorAll(".the-nv")).filter(el => el !== item)
+            if (cardsInLane.length >= 2) {
+              handleDragEnd()
+              return
+            }
+          }
           const sourceCell = item.closest(".o-lich")
-          const ref = getDropReference(cell, event, item)
+          const ref = getDropReference(container, event, item)
           if (ref) {
-            cell.insertBefore(item, ref)
+            container.insertBefore(item, ref)
           } else {
-            cell.appendChild(item)
+            container.appendChild(item)
           }
           markCellChanges(cell)
           if (sourceCell && sourceCell !== cell) {
@@ -354,23 +423,30 @@
             }
           })
         })
+        document.querySelectorAll(".ca-lane").forEach(lane => {
+          lane.addEventListener("dragover", handleDragOver)
+          lane.addEventListener("drop", handleDrop)
+          lane.addEventListener("dragleave", event => {
+            if (event.target === lane) {
+              lane.classList.remove("o-lich-hover", "drop-before", "drop-after")
+            }
+          })
+        })
 
         document.getElementById("luu-keo-tha")?.addEventListener("click", async () => {
           const thongBao = document.getElementById("thong-bao-keo-tha")
           if (!lichTuanId) return
-          if (changes.size === 0) {
-            if (thongBao) {
-              thongBao.style.display = "block"
-              thongBao.textContent = "Không có thay đổi để lưu."
-              thongBao.style.background = "rgba(148, 190, 255, 0.18)"
-              thongBao.style.borderColor = "rgba(148, 190, 255, 0.6)"
-            }
-            return
-          }
+          const spaOffNotes = {}
+          document.querySelectorAll(".ghi-chu-spa-off").forEach(textarea => {
+            const ngay = textarea.dataset.ngay
+            if (!ngay) return
+            spaOffNotes[ngay] = textarea.value || ""
+          })
           const payload = {
             lich_tuan_id: parseInt(lichTuanId, 10),
             khoa_nv_off: khoaNvOff,
             changes: Array.from(changes.values()),
+            spa_off_notes: spaOffNotes,
           }
           try {
             const res = await fetch("/cap-nhat-lich", {
@@ -388,7 +464,7 @@
                   thongBao.style.background = "rgba(255, 214, 102, 0.2)"
                   thongBao.style.borderColor = "rgba(255, 214, 102, 0.6)"
                 } else {
-                  thongBao.textContent = "Đã lưu kéo thả."
+                  thongBao.textContent = "Đã lưu lịch và ghi chú SPA OFF."
                   thongBao.style.background = "rgba(94, 255, 180, 0.18)"
                   thongBao.style.borderColor = "rgba(94, 255, 180, 0.6)"
                 }

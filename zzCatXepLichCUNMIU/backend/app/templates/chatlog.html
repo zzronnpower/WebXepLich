@@ -158,6 +158,78 @@
         <div class="goi-y">Assistant</div>
         <p>Đã cập nhật khoảng cách dọc các dòng giờ ca trong cột Nhóm/Ca: `gap` của `.ds-ca` từ `8px` xuống `7px`.</p>
       </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu trang Lịch đã xếp: cột ghi chú phải là ô textarea cho phép nhập và lưu lại, không hiển thị dấu "-" tĩnh.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã thêm form `textarea` + nút `Lưu ghi chú` cho từng dòng lịch ở cột Ghi chú, đồng thời bổ sung route backend `/lich-da-xep/{lich_tuan_id}/ghi-chu` để lưu vào `lich_tuan.ghi_chu`.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu phần chọn theme chỉ hiển thị khi kéo xuống cuối trang; lúc đang scroll ở trên thì không thấy.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã đổi `theme-dock` từ fixed sang static và đặt margin cuối trang, nên bộ chọn theme giờ nằm trong flow ở đáy trang và chỉ thấy khi kéo xuống gần cuối.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu ô ngày bắt đầu (thứ Hai) mặc định chọn thứ Hai tiếp theo so với ngày hiện tại (ví dụ thứ Ba 24/02 thì chọn 02/03).</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã thêm helper tính `thứ Hai tiếp theo` và áp vào mặc định trang chủ khi không truyền ngày/không chọn lịch cụ thể. Nhánh lỗi nhập ngày nghỉ trên trang chủ cũng dùng cùng mặc định để hành vi nhất quán.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Ở dự án xếp lịch, phần ghi chú SPA OFF cần được lưu theo từng lịch đã xếp và khi mở lại phải hiện đúng ghi chú theo từng ngày.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã chuyển SPA OFF sang lưu bền vững theo từng `lich_tuan`: thêm cột `spa_off_ghi_chu` (JSON theo ngày), gửi `spa_off_notes` khi bấm lưu, cho phép lưu cả khi chỉ sửa ghi chú, và prefill lại đúng từng ô ngày khi mở lại lịch đã xếp.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Kiểm tra lại lỗi ràng buộc thiếu người ở `796ADV` và `Chích ngoài`; nghi ngờ còn lệch dòng cũ làm báo thiếu ảo giống bug trước đó.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã siết lại backend save: sau khi nhận payload sẽ chuẩn hóa lại toàn bộ dòng nhóm chi nhánh (không chỉ card vừa kéo) để map `thu_tu -> ca_id -> chi_nhanh_id`, nhờ đó loại bỏ bản ghi null gây thiếu ảo ở `CN/796ADV`. Đồng thời sửa fallback hiển thị tên ca trong `kiem_tra_lich` để không còn thông báo dạng `ca` trống cho Chích ngoài.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu mới: mọi ca cho phép để trống, đồng thời một ca có thể có 1 hoặc 2 nhân viên khi kéo-thả và lưu lịch.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã cập nhật theo chế độ linh hoạt: kiểm tra lịch không còn chặn lỗi "thiếu người" khi ca trống; backend giới hạn tối đa 2 người cho mỗi `(ngày, chi nhánh, ca)` và map kéo-thả theo quy tắc 2 vị trí mỗi ca (thứ tự dọc), đồng thời thêm ghi chú hướng dẫn ngay trên bảng lịch.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Báo lỗi sau cập nhật: chưa kéo được 2 người cùng ca; kéo người ca `8h-19h` đi thì các nhân viên ca dưới bị nhảy lên, trong khi ca `10h-21h` kéo được.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã hotfix sang cơ chế kéo-thả theo lane ca: mỗi ca có drop-zone riêng (`ca-lane`) và gửi `ca_id` rõ ràng khi lưu. Backend ưu tiên `ca_id` từ payload + chặn >2 người/ca, nên không còn hiện tượng reorder một list chung làm nhảy ca khi kéo từ ca đầu.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu UI thêm: nếu 1 ca có 2 nhân viên thì hiển thị nằm cùng hàng ngang chia đôi; khi kéo 1 người đi thì người còn lại phải tự động giãn full ngang.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã cập nhật CSS lane ca: dùng flex 2 cột cho card nhân viên trong cùng ca. Với 2 người sẽ hiển thị 50/50, và khi còn 1 người thì card tự động full-width bằng `:only-child`, áp dụng ngay lúc kéo-thả không cần lưu lại.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Báo lỗi mới: ở 326TTV/197LT5 có thể kéo card xuống quá số dòng ca (xuất hiện dòng ảo ngoài 4 ca hoặc 3 ca).</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã khóa đúng vùng thả cho nhóm có lane: chỉ nhận drop khi nằm trong `.ca-lane`, không nhận thả vào khoảng trống của `.o-lich`. Đồng thời thêm `stopPropagation` ở dragover/drop để tránh parent handler xử lý lặp gây tạo dòng ảo.</p>
+      </div>
     </div>
   </section>
 {% endblock %}

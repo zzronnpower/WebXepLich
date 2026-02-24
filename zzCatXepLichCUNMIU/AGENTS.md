@@ -249,11 +249,23 @@ Ví dụ flow nút “Xếp lịch”:
 - Khi có hai nút hành động chính song song trên cùng form (ví dụ `XẾP LỊCH` và `Tự xếp lịch`), giữ cùng kích thước để cân bằng bố cục; dùng màu nền khác biệt để phân vai thao tác.
 - Trang `Lịch đã xếp` phải hỗ trợ quản trị vòng đời lịch: đổi tên (`ten_lich`) và xóa lịch cũ trực tiếp theo từng dòng, có xác nhận trước khi xóa.
 - Khu ghi chú điều phối tạm (như `SPA OFF`) phải tách biệt khỏi bảng chính, dùng textarea nhiều dòng và mặc định không lưu (không DB, không cache) trừ khi user yêu cầu rõ cơ chế persistence.
+- Khi user yêu cầu persistence cho `SPA OFF`, phải lưu theo từng `lich_tuan` và theo từng ngày trong tuần; khi mở lại lịch đã xếp phải prefill đúng ghi chú tương ứng từng ngày.
 - Với lịch `TU_XEP`, sau mỗi lần lưu kéo-thả phải chuẩn hóa `ca_id`/`chi_nhanh_id` theo `thu_tu` dòng và mapping nhóm; nếu không, kiểm tra ràng buộc sẽ báo thiếu ảo dù UI đã sắp đúng.
+- Khi lưu lịch, cần chuẩn hóa lại toàn bộ các dòng thuộc nhóm chi nhánh (không chỉ các card vừa kéo) để tránh tồn tại bản ghi cũ `ca_id`/`chi_nhanh_id` null gây báo thiếu ảo cho `796ADV` hoặc `Chích ngoài`.
 - Cụm nút thao tác lịch nên đặt thành toolbar tách riêng phía trên tiêu đề bảng để tránh dồn chỗ trong header và giữ vùng bảng dễ đọc.
 - Trang ChatLog ưu tiên hiển thị theo kiểu conversation (bubble User/Assistant, căn trái-phải rõ ràng), tránh layout card-grid gây khó theo dõi mạch hội thoại.
 - Với toolbar thao tác lịch, có thể dùng màu nhấn riêng (ví dụ nền hồng nhạt + chữ đậm) khi user yêu cầu tăng độ nổi bật; giữ nguyên id/nút để không ảnh hưởng JS.
 - Với tinh chỉnh màu toolbar thao tác lịch, ưu tiên tone sáng trung tính (ví dụ vàng nhạt) nếu màu nhấn hiện tại gây lệch tổng thể giao diện.
 - Với tinh chỉnh typography bảng lịch, hỗ trợ chỉnh theo giá trị px cụ thể user yêu cầu (ví dụ 16.5px) để chốt đúng tỷ lệ thị giác.
 - Với tinh chỉnh nhịp dọc cột giờ ca, cho phép chỉnh `gap` rất nhỏ (ví dụ 8px -> 7px) để đạt mật độ hiển thị user mong muốn.
+- Cột `Ghi chú` ở trang `Lịch đã xếp` phải hỗ trợ nhập/sửa trực tiếp bằng textarea và lưu DB theo từng lịch; tránh hiển thị placeholder tĩnh kiểu `-` khi nghiệp vụ cần cập nhật nội dung.
+- Thông báo kiểm tra thiếu nhu cầu phải hiển thị rõ tên ca cho cả nhu cầu động (ví dụ `Chích ngoài` tạo runtime), không để trống phần `ca`.
+- Với chế độ kéo-thả vận hành linh hoạt, cho phép để trống tất cả ca (không coi là lỗi thiếu người); thay vào đó chỉ chặn các vi phạm cứng như trùng ca/ngày, sai chi nhánh, hoặc vượt giới hạn số người/ca.
+- Giới hạn số người theo ca khi kéo-thả: tối đa 2 nhân viên cho mỗi tổ hợp `(ngày, chi nhánh, ca)`; backend phải chuẩn hóa và kiểm tra để ngăn lưu vượt mức.
+- Để tránh lỗi "nhảy dòng/nhảy ca" khi kéo card ở ca đầu, bảng lịch chi nhánh phải kéo-thả theo lane ca (drop-zone riêng từng ca), không dùng một danh sách card chung cho cả ô ngày.
+- Payload lưu kéo-thả cho nhóm chi nhánh phải gửi rõ `ca_id` theo lane đích; `thu_tu` chỉ dùng để sắp vị trí trong lane và fallback tương thích dữ liệu cũ.
+- Với lane ca có tối đa 2 người, UI nên hiển thị 2 card nằm ngang (chia đôi bề ngang); khi chỉ còn 1 card sau thao tác kéo thì card còn lại tự động giãn full-width ngay không cần lưu.
+- Với nhóm có lane ca (326/197/796/CN), chỉ cho phép drop vào đúng `ca-lane`; không cho thả vào vùng trống của cả ô ngày để tránh phát sinh "dòng ảo" vượt số ca.
+- Với bộ chọn theme dạng dock, dùng `fixed` chỉ khi user muốn dock nổi; nếu user muốn chỉ thấy ở cuối trang thì chuyển về in-flow (`static`) và đặt ở footer area.
+- Với ô `Ngày bắt đầu (thứ Hai)` trên trang chủ, mặc định nên là **thứ Hai tiếp theo** so với ngày hiện tại (strict next Monday), trừ khi user truyền ngày rõ ràng hoặc đang mở lịch theo `lich_tuan_id`.
 - Nếu user báo "đã sửa nhưng giao diện chưa đổi", ưu tiên xác nhận lại bằng `docker compose up -d --build` và yêu cầu hard refresh để loại trừ cache/container cũ.

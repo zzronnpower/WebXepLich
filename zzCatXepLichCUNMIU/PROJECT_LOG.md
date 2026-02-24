@@ -266,3 +266,88 @@ This will wipe existing data and re-seed the updated dataset.
 - Adjusted vertical spacing between shift-time rows in left column:
   - `.ds-ca` `gap` changed from `8px` to `7px`.
 - Goal: tighten spacing slightly while keeping readability.
+
+## Latest Update (2026-02-23, editable notes in schedule history)
+
+- Upgraded `Ghi chú` column on `/lich-da-xep` from static text (`-`) to editable per-row form:
+  - Added `textarea` input and `Lưu ghi chú` action for each schedule row.
+  - Existing note value is prefilled for quick edits.
+- Added backend persistence endpoint:
+  - `POST /lich-da-xep/{lich_tuan_id}/ghi-chu`
+  - Saves form value into `lich_tuan.ghi_chu` (empty text normalized to null).
+- Updated table layout sizing to accommodate note editor without action overlap.
+
+## Latest Update (2026-02-23, theme selector footer behavior)
+
+- Changed theme selector dock behavior from floating to in-flow footer placement:
+  - `.theme-dock` switched from `position: fixed` to `position: static`.
+  - Added footer-like margin so it stays near page bottom.
+- Result:
+  - Theme selector is no longer always visible during scroll at top/middle content.
+  - It appears naturally when user scrolls toward the bottom of the page.
+
+## Latest Update (2026-02-23, default start date to next Monday)
+
+- Updated default value logic for `Ngày bắt đầu (thứ Hai)` on home page:
+  - Added helper to compute the **next Monday** relative to current date.
+  - Rule is strict "next" Monday (if today is Monday, default becomes Monday next week).
+- Applied in home-page default branch and invalid leave-input fallback renders so the date picker remains consistent after validation errors.
+
+## Latest Update (2026-02-24, SPA OFF notes persisted per schedule/day)
+
+- Upgraded `SPA OFF` note area from temporary-only to persisted storage by schedule week:
+  - Added new DB field `lich_tuan.spa_off_ghi_chu` (JSON text) with startup migration.
+  - Stored as `{ "YYYY-MM-DD": "note text" }` for day-level mapping.
+- Weekly board now preloads SPA OFF notes for the currently opened schedule:
+  - `lay_lich_hien_thi` parses persisted JSON and maps notes back to each day column.
+  - Textareas in SPA OFF section are prefilled correctly when reopening any saved schedule.
+- Extended save payload and backend endpoint `/cap-nhat-lich`:
+  - Frontend now sends `spa_off_notes` together with drag-drop changes.
+  - Backend accepts note-only saves (without drag changes), validates week dates, and persists per-day notes to `lich_tuan`.
+
+## Latest Update (2026-02-24, 796ADV/CN constraint-check normalization hardening)
+
+- Hardened save-time normalization in `/cap-nhat-lich` for branch groups:
+  - After applying incoming drag changes, backend now re-normalizes **all** rows in the schedule snapshot (`du_kien`) for non-free groups, mapping `thu_tu` -> `ca_id` and `(nhom, ca)` -> `chi_nhanh_id`.
+  - Prevents stale legacy rows (especially in `796ADV` / `CN`) from keeping `ca_id`/`chi_nhanh_id` as null and causing false shortage errors.
+- Improved constraint-check error text in `kiem_tra_lich`:
+  - For runtime-generated demands (e.g. `Chích ngoài`), ca name is now resolved via `ca_id` fallback map when ORM relation is missing.
+  - Error messages no longer show blank `ca` suffix.
+
+## Latest Update (2026-02-24, flexible empty shifts + up to 2 staff per shift)
+
+- Updated schedule validation policy for manual drag-drop operation:
+  - Removed blocking "Thiếu người" errors from `kiem_tra_lich` so all shifts can be left empty without failing constraint checks.
+  - Added hard cap check: each `(ngày, chi nhánh, ca)` now allows at most 2 staff; exceeding this returns validation error.
+- Upgraded save-time shift mapping in `/cap-nhat-lich` to support 2 staff per shift:
+  - Introduced slot mapping rule with 2 vertical positions per shift (`thu_tu` 1-2 => ca #1, 3-4 => ca #2, ...).
+  - Backend now maps `thu_tu` to `ca_id` using this 2-slot-per-shift rule and blocks out-of-range placements.
+- UI guidance enhancement on home schedule board:
+  - Added helper note under title to explain drag-drop interpretation: max 2 staff/shift and ordering behavior by vertical position.
+
+## Latest Update (2026-02-24, lane-based drag/drop hotfix for multi-staff shifts)
+
+- Fixed drag/drop behavior regression that caused slot jumping across shifts:
+  - Root-cause: frontend was still reordering one flat card list per day-cell while backend interpreted order as 2-slot-per-shift mapping.
+  - Impact: moving a card out of `8h-19h` could shift lower cards upward and remap their ca unexpectedly.
+- Implemented lane-based drag/drop in weekly board:
+  - Branch groups now render dedicated drop lanes per shift (`ca-lane`) and cards are dragged within/across lanes on same day.
+  - Each lane is capped at 2 cards on UI side.
+- Save payload + backend mapping hardening:
+  - Frontend now sends explicit `ca_id` for changed cards.
+  - Backend `/cap-nhat-lich` prioritizes incoming `ca_id` (with strict group validation), then falls back to legacy `thu_tu` mapping only when needed.
+  - Added save-time hard cap check to reject >2 staff for any `(ngày, chi nhánh, ca)`.
+
+## Latest Update (2026-02-24, side-by-side cards for 2 staff in same shift)
+
+- Improved shift-lane visual layout for dual staffing:
+  - `.ca-lane` switched to wrapped flex layout with two equal-width slots.
+  - When a lane has 2 staff, cards render side-by-side (50/50 width).
+  - When one staff is dragged away, remaining card auto-expands to full width via `:only-child` (no save/reload needed).
+
+## Latest Update (2026-02-24, prevent extra phantom rows in branch lanes)
+
+- Fixed drag target validation for lane-based cells:
+  - For groups with shift lanes (`326TTV`, `197LT5`, `796ADV`, `CN`), drop is now accepted only when pointer is inside a `.ca-lane`.
+  - Dropping into blank area of the parent day-cell is rejected, preventing creation of visual "row 5/row 4" beyond configured shift count.
+- Added event propagation guard on dragover/drop (`stopPropagation`) to avoid parent `.o-lich` handler re-processing lane drops.

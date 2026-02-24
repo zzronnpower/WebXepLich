@@ -594,13 +594,48 @@ th {
   padding-top: var(--lane-nhom-ca);
 }
 
+.ds-ca-lane {
+  display: grid;
+  gap: 7px;
+}
+
+.ca-lane {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 6px;
+  min-height: 36px;
+  padding: 2px;
+  position: relative;
+  border-radius: 10px;
+  border: 1px dashed rgba(71, 92, 126, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ca-lane .the-nv {
+  flex: 1 1 calc(50% - 3px);
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.ca-lane .the-nv:only-child {
+  flex-basis: 100%;
+}
+
 .o-lich.o-lich-hover {
   outline: 2px dashed rgba(98, 142, 255, 0.7);
   outline-offset: -4px;
 }
 
+.ca-lane.o-lich-hover {
+  outline: 2px dashed rgba(98, 142, 255, 0.7);
+  outline-offset: -1px;
+}
+
 .o-lich.drop-before::before,
-.o-lich.drop-after::after {
+.o-lich.drop-after::after,
+.ca-lane.drop-before::before,
+.ca-lane.drop-after::after {
   content: "";
   position: absolute;
   left: 8px;
@@ -614,8 +649,16 @@ th {
   top: 6px;
 }
 
+.ca-lane.drop-before::before {
+  top: 2px;
+}
+
 .o-lich.drop-after::after {
   bottom: 6px;
+}
+
+.ca-lane.drop-after::after {
+  bottom: 2px;
 }
 
 .the-nv-off-locked {
@@ -680,14 +723,14 @@ th {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  min-width: 1780px;
+  min-width: 1940px;
 }
 
 .lich-su-bang .cot-id { width: 90px; }
 .lich-su-bang .cot-ten { width: 320px; }
 .lich-su-bang .cot-tuan { width: 320px; }
 .lich-su-bang .cot-trang-thai { width: 170px; }
-.lich-su-bang .cot-ghi-chu { width: 180px; }
+.lich-su-bang .cot-ghi-chu { width: 340px; }
 .lich-su-bang .cot-hanh-dong { width: 620px; }
 
 .lich-su-bang th,
@@ -729,6 +772,22 @@ th {
 .form-doi-ten-lich input {
   width: 100%;
   min-width: 0;
+}
+
+.form-ghi-chu-lich {
+  display: grid;
+  gap: 8px;
+}
+
+.form-ghi-chu-lich textarea {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+}
+
+.form-ghi-chu-lich .nut-phu {
+  justify-self: start;
+  white-space: nowrap;
 }
 
 .nut-xoa-lich {
@@ -800,10 +859,7 @@ th {
 }
 
 .theme-dock {
-  position: fixed;
-  right: 14px;
-  bottom: 14px;
-  z-index: 70;
+  position: static;
   border: 1px solid var(--vien);
   border-radius: 12px;
   background: var(--dock-bg);
@@ -812,6 +868,7 @@ th {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  margin: 28px 8% 24px auto;
   box-shadow: 0 8px 22px var(--dock-shadow);
   backdrop-filter: blur(10px);
 }

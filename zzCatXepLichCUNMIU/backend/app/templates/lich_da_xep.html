@@ -44,7 +44,17 @@
                 </td>
                 <td>{{ lich.ngay_bat_dau.strftime('%d/%m/%Y') }} - {{ lich.ngay_ket_thuc.strftime('%d/%m/%Y') }}</td>
                 <td>{{ lich.trang_thai or 'MOI' }}</td>
-                <td>{{ lich.ghi_chu or '-' }}</td>
+                <td>
+                  <form action="/lich-da-xep/{{ lich.id }}/ghi-chu" method="post" class="form-ghi-chu-lich">
+                    <textarea
+                      name="ghi_chu"
+                      rows="2"
+                      maxlength="500"
+                      placeholder="Nhập ghi chú lịch..."
+                    >{{ lich.ghi_chu or '' }}</textarea>
+                    <button class="nut-phu" type="submit">Lưu ghi chú</button>
+                  </form>
+                </td>
                 <td class="o-hanh-dong">
                   <div class="lich-su-hanh-dong">
                     <a class="nut-phu" href="/?lich_tuan_id={{ lich.id }}">Mở & chỉnh sửa</a>
