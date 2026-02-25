@@ -10,10 +10,42 @@ docker compose up -d --build
 
 Mo trinh duyet tai: `http://localhost:8000`
 
+Luu y: trong `docker-compose.yml` hien tai, web map `8001:8000`, vi vay truy cap `http://localhost:8001`.
+
 ## Luu y WSL (Linux tren Windows)
 
 - Bat Docker Desktop va WSL integration cho distro dang dung.
 - Neu port 8000 dang bi chiem, dung container hoac doi port trong `docker-compose.yml`.
+
+## Deploy sang may Windows khac (giu nguyen DB hien tai)
+
+### 1) Tren may nguon (dang chay du an)
+
+```bash
+mkdir -p backups
+docker compose exec -T db pg_dump --clean --if-exists -U lich_user -d lich_lam_viec > backups/lich_dump.sql
+gzip -f backups/lich_dump.sql
+```
+
+Copy file `backups/lich_dump.sql.gz` sang may Windows dich.
+
+### 2) Tren may Windows dich
+
+- Cai `Git for Windows` va `Docker Desktop`.
+- Clone repo va vao dung thu muc du an.
+
+```powershell
+git clone https://github.com/zzronnpower/WebXepLich.git
+cd WebXepLich\zzCatXepLichCUNMIU
+```
+
+Chay script all-in-one (build + restore):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\windows_setup_and_restore.ps1 -DumpPath .\backups\lich_dump.sql.gz
+```
+
+Mo app tai: `http://localhost:8001`
 
 Kiem tra port 8000:
 

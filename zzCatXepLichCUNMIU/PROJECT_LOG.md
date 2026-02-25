@@ -474,3 +474,15 @@ This will wipe existing data and re-seed the updated dataset.
 - Outcome:
   - Saving schedule no longer triggers the leave-page confirm popup.
   - Draft confirm behavior is preserved for actual in-app navigation away from the page.
+
+## Latest Update (2026-02-25, windows handover scripts + full DB transfer guide)
+
+- Added Windows deployment helper scripts:
+  - `scripts/windows_setup_and_restore.ps1`: one command to run `docker compose up -d --build`, optionally restore `.sql`/`.sql.gz` dump into Postgres container, then restart web.
+  - `scripts/windows_setup_and_restore.bat`: thin wrapper to call the PowerShell script for users who prefer double-click / `.bat` workflow.
+- Updated README handover instructions:
+  - Clarified runtime URL for current compose mapping (`http://localhost:8001`).
+  - Added source-machine dump steps and target Windows restore flow with exact commands.
+- Operational output for current handover:
+  - Generated full database dump artifact at `backups/lich_dump_v1.1_20260225_121102.sql.gz`.
+  - SHA256: `00ddbc4b56ad13302bddadb99c4a44902bb5fe649a258993d210d9c216c56a11`.

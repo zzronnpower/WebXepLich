@@ -318,6 +318,14 @@
         <div class="goi-y">Assistant</div>
         <p>Đã sửa guard click để chỉ chặn điều hướng thật sự: bỏ qua link có `download`, link `data:`/`blob:`, và `_blank`. Vì vậy bấm `Lưu Lịch Đã Xếp` (auto-download screenshot) sẽ không còn hiện popup confirm, còn chuyển trang vẫn giữ đúng flow hỏi lưu/hủy nháp.</p>
       </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Cần bàn giao sang máy Windows khác (không có OpenCode), yêu cầu xuất full DB hiện tại và hướng dẫn/setup để máy kia chạy tiếp công việc.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã tạo dump toàn bộ DB để bàn giao (`backups/lich_dump_v1.1_20260225_121102.sql.gz`, kèm SHA256), đồng thời bổ sung script `scripts/windows_setup_and_restore.ps1` + wrapper `.bat` để máy Windows chỉ cần chạy một lệnh là dựng Docker và restore DB. README cũng được cập nhật flow deploy/restore chi tiết cho máy đích.</p>
+      </div>
     </div>
   </section>
 {% endblock %}

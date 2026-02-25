@@ -287,3 +287,5 @@ Ví dụ flow nút “Xếp lịch”:
 - Với flow xác nhận rời trang của lịch nháp, dùng `window.confirm` cho thao tác chuyển trang trong app (OK= lưu, Cancel=không lưu), và dùng `beforeunload` mặc định của browser cho đóng tab/reload.
 - Khi user chọn không lưu hoặc đóng tab/reload khỏi lịch nháp, cần dọn bản nháp bằng endpoint backend riêng; dùng `navigator.sendBeacon` ở `pagehide` để giảm rủi ro sót dữ liệu.
 - Guard xác nhận rời trang lịch nháp phải bỏ qua các click không phải điều hướng thực (link `download`, `data:`, `blob:`, `_blank`) để không chặn luồng tải ảnh/screenshot sau khi bấm lưu.
+- Khi bàn giao sang máy Windows khác, ưu tiên cung cấp script PowerShell all-in-one (docker up + restore dump) để user không phụ thuộc OpenCode/VS tooling ở máy nguồn.
+- Dump DB bàn giao nên dùng `pg_dump --clean --if-exists` và đóng gói `.sql.gz` để restore nhanh và giảm rủi ro lệch schema/data giữa hai máy.
