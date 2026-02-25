@@ -19,6 +19,8 @@
   --option-chu: #f7f7ff;
   --dock-bg: rgba(15, 18, 36, 0.92);
   --dock-shadow: rgba(0, 0, 0, 0.32);
+  --mau-tieu-de-bang-lich: #f7f7ff;
+  --mau-chu-thu-bang-lich: #f7f7ff;
 }
 
 html[data-theme="pinky"],
@@ -42,6 +44,8 @@ body.theme-pinky {
   --option-chu: #684744;
   --dock-bg: rgba(238, 222, 206, 0.95);
   --dock-shadow: rgba(110, 80, 74, 0.18);
+  --mau-tieu-de-bang-lich: #6c4a47;
+  --mau-chu-thu-bang-lich: #6c4a47;
 }
 
 html[data-theme="light-green"],
@@ -65,6 +69,8 @@ body.theme-light-green {
   --option-chu: #3e5a4d;
   --dock-bg: rgba(213, 224, 195, 0.95);
   --dock-shadow: rgba(80, 105, 92, 0.2);
+  --mau-tieu-de-bang-lich: #3f5a4f;
+  --mau-chu-thu-bang-lich: #3f5a4f;
 }
 
 * {
@@ -396,6 +402,54 @@ textarea {
   margin-bottom: 14px;
 }
 
+.tuy-chon-mau-lich {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.truong-mau-lich {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--nhan);
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--vien);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.truong-mau-lich span {
+  color: var(--chu);
+  white-space: nowrap;
+}
+
+.truong-mau-lich input[type="color"] {
+  width: 30px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+}
+
+.nut-ap-dung-mau {
+  font-weight: 700;
+}
+
+.tieu-de-bang-lich {
+  justify-content: center;
+}
+
+#tieu-de-bang-xep-lich {
+  color: var(--mau-tieu-de-bang-lich);
+  text-align: center;
+}
+
 .thanh-hanh-dong-lich .nut-phu {
   font-weight: 700;
   background: #f7efc9;
@@ -487,6 +541,10 @@ td {
 th {
   text-align: left;
   background: rgba(255, 255, 255, 0.06);
+}
+
+#bang-lich-chinh thead th {
+  color: var(--mau-chu-thu-bang-lich);
 }
 
 .bang-lich tbody td {
@@ -838,6 +896,36 @@ th {
   padding: 14px 18px;
 }
 
+.ket-qua-luu-kiem-tra {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.ket-qua-luu-kiem-tra strong {
+  white-space: nowrap;
+}
+
+.ket-qua-luu-kiem-tra span {
+  color: var(--chu);
+}
+
+.ghi-chu-ket-qua-luu {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--nhan);
+}
+
+.ghi-chu-ket-qua-luu strong {
+  color: var(--chu);
+}
+
+.canh-bao-lich-nhap {
+  margin-top: 10px;
+  background: rgba(255, 191, 94, 0.2);
+  border-color: rgba(255, 191, 94, 0.62);
+}
+
 .form-tim {
   display: flex;
   gap: 10px;
@@ -847,6 +935,11 @@ th {
   .thanh-dieu-huong {
     flex-direction: column;
     gap: 12px;
+  }
+
+  .tuy-chon-mau-lich {
+    margin-left: 0;
+    width: 100%;
   }
 
   .thanh-dieu-huong nav a {

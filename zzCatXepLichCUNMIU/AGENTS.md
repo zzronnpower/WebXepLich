@@ -269,3 +269,21 @@ Ví dụ flow nút “Xếp lịch”:
 - Với bộ chọn theme dạng dock, dùng `fixed` chỉ khi user muốn dock nổi; nếu user muốn chỉ thấy ở cuối trang thì chuyển về in-flow (`static`) và đặt ở footer area.
 - Với ô `Ngày bắt đầu (thứ Hai)` trên trang chủ, mặc định nên là **thứ Hai tiếp theo** so với ngày hiện tại (strict next Monday), trừ khi user truyền ngày rõ ràng hoặc đang mở lịch theo `lich_tuan_id`.
 - Nếu user báo "đã sửa nhưng giao diện chưa đổi", ưu tiên xác nhận lại bằng `docker compose up -d --build` và yêu cầu hard refresh để loại trừ cache/container cũ.
+- Với rule nhân viên không thuộc chi nhánh cấu hình, chế độ kéo-thả có thể cho phép lưu để vận hành linh hoạt; khi đó phải trả cảnh báo/vi phạm rõ ràng sau khi lưu để người dùng nhận biết và tự quyết định xử lý.
+- Khi user yêu cầu lưu kèm ảnh chụp màn hình, ưu tiên chụp đúng vùng nghiệp vụ (theo mốc tiêu đề + nhóm cuối cần lấy, ví dụ OFF), tự động tải ảnh ngay sau save thành công và không làm đổi flow lưu dữ liệu.
+- Khi trang có nhiều bảng dùng chung class (ví dụ `.bang-lich`), logic screenshot phải scope bằng id riêng của bảng mục tiêu để tránh crop nhầm vùng.
+- Kết quả thao tác lưu/kiểm tra nên hiển thị tập trung tại khu vực đầu trang để người vận hành thấy ngay, thay vì đặt sâu trong section bảng lịch.
+- Với cụm nút thao tác vận hành lịch, ưu tiên tách thành một `khung` độc lập (riêng section) thay vì gộp chung với vùng bảng để bố cục rõ tầng thao tác.
+- Khi screenshot cần loại trừ thành phần ngoài vùng nghiệp vụ (ví dụ toolbar), ưu tiên render trực tiếp phần tử wrapper mục tiêu rồi crop trong wrapper, thay vì chụp toàn `document.body`.
+- Khi export screenshot theo theme sáng (như Pinky), cần ép `backgroundColor` theo màu nền khung hiện tại để tránh ảnh PNG bị nền đen do vùng trong suốt.
+- Banner kết quả thao tác lưu/kiểm tra không nên tự mất vì reload sau save; giữ nguyên banner tại chỗ và chỉ cập nhật/ghi đè khi có thao tác mới.
+- Với thao tác `Lưu Lịch Đã Xếp`, nếu backend trả lỗi chặn lưu (`ok=false`) do ràng buộc/kiểm tra, frontend vẫn nên thử screenshot và tự tải ảnh để không gián đoạn luồng vận hành.
+- Ghi chú vận hành kiểu hướng dẫn kéo-thả (ví dụ giới hạn 2 người/ca) nên đặt ngay dưới banner `Kết quả thao tác lưu/kiểm tra:` với nhãn `Notes:` để tập trung thông tin ở đầu trang.
+- Màu tiêu đề bảng lịch và màu header theo thứ/ngày có thể cho phép tùy chỉnh trực tiếp trên trang bằng color picker; lựa chọn màu lưu ở `localStorage` theo trình duyệt hiện tại.
+- Screenshot bảng lịch phải phản ánh đúng màu đang hiển thị sau khi user chọn color picker, không ép về màu mặc định của theme.
+- Nếu user yêu cầu thao tác rõ ràng, color picker nên đi kèm nút `Áp dụng`: chỉ đổi màu sau khi click nút, không auto đổi theo từng lần kéo chọn.
+- Với nhu cầu tối giản, có thể dùng 1 màu chung áp cho cả tiêu đề bảng lịch và chữ các cột thứ/ngày; tránh tách quá nhiều picker gây rối thao tác vận hành.
+- Khi user báo bấm `Áp dụng` nhưng màu chưa đổi, ưu tiên áp màu trực tiếp bằng inline style lên phần tử mục tiêu (tiêu đề + `thead th`) đồng thời vẫn giữ CSS variable để tránh sai khác do cache/theme override.
+- Với flow xác nhận rời trang của lịch nháp, dùng `window.confirm` cho thao tác chuyển trang trong app (OK= lưu, Cancel=không lưu), và dùng `beforeunload` mặc định của browser cho đóng tab/reload.
+- Khi user chọn không lưu hoặc đóng tab/reload khỏi lịch nháp, cần dọn bản nháp bằng endpoint backend riêng; dùng `navigator.sendBeacon` ở `pagehide` để giảm rủi ro sót dữ liệu.
+- Guard xác nhận rời trang lịch nháp phải bỏ qua các click không phải điều hướng thực (link `download`, `data:`, `blob:`, `_blank`) để không chặn luồng tải ảnh/screenshot sau khi bấm lưu.

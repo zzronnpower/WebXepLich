@@ -230,6 +230,94 @@
         <div class="goi-y">Assistant</div>
         <p>Đã khóa đúng vùng thả cho nhóm có lane: chỉ nhận drop khi nằm trong `.ca-lane`, không nhận thả vào khoảng trống của `.o-lich`. Đồng thời thêm `stopPropagation` ở dragover/drop để tránh parent handler xử lý lặp gây tạo dòng ảo.</p>
       </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu mới: khi kéo-thả nếu lỗi "nhân viên không thuộc chi nhánh" thì vẫn phải lưu lịch, nhưng vẫn cần báo vi phạm để tôi biết.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã đổi rule lưu kéo-thả: vi phạm "không thuộc chi nhánh" không còn chặn commit. Hệ thống vẫn lưu lịch, đồng thời trả cảnh báo vi phạm sau lưu (kèm tên nhân viên, chi nhánh, ngày) qua `errors[]` để UI hiển thị rõ.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu tiếp: khi bấm lưu lịch thì tự động chụp ảnh đúng vùng bảng xếp lịch (từ tiêu đề bảng đến hết OFF màu xám) và tải ảnh về máy; đồng thời đổi tên nút lưu.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã cập nhật nút thành `Lưu Lịch Đã Xếp` và thêm auto-screenshot sau khi save thành công: frontend dùng `html2canvas` crop vùng từ tiêu đề bảng đến hết hàng OFF, tự động tải PNG về máy; nếu chụp lỗi thì vẫn giữ kết quả lưu DB và báo rõ trạng thái tải ảnh.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Báo lỗi: ảnh tải về vẫn lấy sai vùng và mong muốn chuyển toàn bộ thông báo lưu/kiểm tra lên phần đầu trang, dùng nhãn cố định để dễ theo dõi.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã fix selector screenshot bằng id riêng `#bang-lich-chinh` (không còn bắt nhầm bảng ngày nghỉ), đồng thời chuyển thông báo vào banner đầu trang với nhãn `Kết quả thao tác lưu/kiểm tra:` và chỉ thay nội dung cảnh báo/kết quả trong banner này.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu tiếp: tách cụm nút thao tác lịch thành một vùng riêng biệt như block độc lập, đồng thời screenshot vẫn đang lấy sai (bị lẫn phần toolbar).</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã tách toolbar thao tác lịch sang section `khung` riêng và đổi cơ chế chụp ảnh sang render wrapper `#vung-chup-bang-lich` rồi crop theo mốc tiêu đề -> OFF trong wrapper. Kết quả ảnh không còn dính phần toolbar phía trên.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Phản hồi mới: screenshot vẫn có nền đen ở vùng tiêu đề trên ảnh và banner kết quả bị mất quá nhanh do trang tự refresh sau khi lưu.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã sửa 2 điểm: ép nền screenshot theo màu nền khung hiện tại (hợp theme Pinky, không còn nền đen) và bỏ auto-reload sau save để banner `Kết quả thao tác lưu/kiểm tra:` giữ nguyên cho tới lần thao tác tiếp theo.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Tôi muốn nếu lưu bị lỗi ràng buộc thì vẫn screenshot + tải ảnh, và dời câu nhắc tối đa 2 người/ca xuống dưới phần kết quả lưu/kiểm tra với nhãn Notes.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã cập nhật theo yêu cầu: frontend luôn thử chụp và tải ảnh sau khi bấm `Lưu Lịch Đã Xếp` kể cả khi backend trả `ok=false`; banner vẫn báo lỗi lưu kèm trạng thái tải ảnh. Đồng thời đã chuyển câu nhắc vận hành thành dòng `Notes:` đặt ngay dưới banner `Kết quả thao tác lưu/kiểm tra:` ở đầu trang và bỏ vị trí cũ trên bảng.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Cho tiêu đề bảng lịch ra giữa, đồng thời cho phép tự chọn màu tiêu đề + màu các thứ ngay trên web; màu chọn phải áp vào screenshot đúng như đang hiển thị.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã căn giữa tiêu đề `Bảng xếp lịch làm việc Phòng Khám Thú Y Cún Miu` và thêm bộ color picker trong toolbar (`Màu tiêu đề`, `Màu chữ thứ`, `Màu nền thứ`). Màu được áp theo CSS variables, lưu theo trình duyệt bằng `localStorage`, và ảnh screenshot giữ đúng màu user đang chọn vì chụp trực tiếp vùng bảng đã render.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Tôi cần một bảng màu duy nhất áp cho tiêu đề + các thứ, có nút `Áp dụng`; click nút thì mới đổi màu, và khi lưu lịch thì screenshot phải ra đúng màu đã áp dụng.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã tinh gọn đúng yêu cầu: gộp còn 1 color picker `Màu tiêu đề + thứ` kèm nút `Áp dụng`, chỉ đổi màu sau khi bấm nút. Màu áp chung cho tiêu đề bảng và chữ header thứ/ngày, lưu theo trình duyệt (`localStorage`), và screenshot khi lưu lịch sẽ chụp đúng màu đang áp dụng.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Báo lỗi mới: bấm `Áp dụng` nhưng màu tiêu đề và màu thứ vẫn không đổi, nghi bị conflict với theme.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã gia cố cơ chế apply màu: ngoài cập nhật CSS variables, JS giờ set inline style trực tiếp lên `#tieu-de-bang-xep-lich` và toàn bộ `#bang-lich-chinh thead th`. Cách này tránh ảnh hưởng cache/theme override nên bấm `Áp dụng` sẽ thấy đổi màu ngay; screenshot khi lưu vẫn ra đúng màu đã áp dụng.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Đổi flow: bấm Xếp lịch/Tự xếp không lưu chính thức ngay. Khi rời trang hoặc đóng tab thì cảnh báo lưu hay không; Yes thì lưu, No thì không lưu.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã chuyển sang flow draft-first: lịch tạo bởi `Xếp lịch`/`Tự xếp` được đánh dấu nháp (`NHAP_*`) và chưa vào danh sách lịch đã xếp. Khi điều hướng trong app sẽ có confirm (OK=lưu nháp thành chính thức, Cancel=hủy nháp), khi đóng tab/reload dùng cảnh báo mặc định browser. Nếu user rời mà không lưu, frontend gọi endpoint hủy nháp (kèm `sendBeacon` ở `pagehide`) để không giữ lịch.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Flow confirm nháp không được áp lên nút `Lưu Lịch Đã Xếp`; hiện đang bị popup khi bấm lưu.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã sửa guard click để chỉ chặn điều hướng thật sự: bỏ qua link có `download`, link `data:`/`blob:`, và `_blank`. Vì vậy bấm `Lưu Lịch Đã Xếp` (auto-download screenshot) sẽ không còn hiện popup confirm, còn chuyển trang vẫn giữ đúng flow hỏi lưu/hủy nháp.</p>
+      </div>
     </div>
   </section>
 {% endblock %}

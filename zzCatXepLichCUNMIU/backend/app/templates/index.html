@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block noi_dung %}
-  <section class="khung hero">
+  <section class="khung hero" data-la-lich-nhap="{{ 1 if la_lich_nhap else 0 }}">
     <div>
       <h1>Lịch làm việc theo tuần</h1>
       <p>Quản lý dữ liệu, xếp lịch nhanh, xem bảng theo template và tải Excel trực tiếp.</p>
@@ -48,6 +48,18 @@
         <strong>{{ loi_ngay_nghi }}</strong>
       </div>
     {% endif %}
+    {% if lich %}
+      <div id="ket-qua-luu-kiem-tra" class="canh-bao ket-qua-luu-kiem-tra" style="display: none;">
+        <strong>Kết quả thao tác lưu/kiểm tra:</strong>
+        <span id="ket-qua-luu-kiem-tra-noi-dung"></span>
+      </div>
+      {% if la_lich_nhap %}
+        <div class="canh-bao canh-bao-lich-nhap" id="canh-bao-lich-nhap">
+          <strong>Lịch hiện tại là bản nháp, chưa lưu chính thức.</strong>
+        </div>
+      {% endif %}
+      <p class="ghi-chu-ket-qua-luu"><strong>Notes:</strong> Mỗi ca cho phép tối đa 2 nhân viên. Hãy kéo thả vào đúng khung của từng ca trong ngày để tránh nhảy ca.</p>
+    {% endif %}
   </section>
 
   <section class="khung">
@@ -94,29 +106,34 @@
     {% endif %}
   </section>
 
-  <section class="khung">
-    {% if lich %}
+  {% if lich %}
+    <section class="khung">
       <div class="thanh-hanh-dong-lich">
         <a class="nut-phu" href="/lich-da-xep">Quản lý lịch đã xếp</a>
         <a class="nut-phu" href="/tai-excel?lich_tuan_id={{ lich.lich_tuan.id }}">Tải Excel</a>
         <a class="nut-phu" href="/kiem-tra?lich_tuan_id={{ lich.lich_tuan.id }}">Kiểm tra ràng buộc</a>
         <button class="nut-phu" type="button" id="toggle-khoa-off">Khóa NV OFF: BẬT</button>
         <button class="nut-phu" type="button" id="toggle-to-sang">Tắt tô sáng</button>
-        <button class="nut-phu" type="button" id="luu-keo-tha" data-lich-tuan-id="{{ lich.lich_tuan.id }}">Lưu kéo thả</button>
+        <button class="nut-phu" type="button" id="luu-keo-tha" data-lich-tuan-id="{{ lich.lich_tuan.id }}">Lưu Lịch Đã Xếp</button>
+        <div class="tuy-chon-mau-lich">
+          <label class="truong-mau-lich" for="mau-tieu-de-va-thu-bang">
+            <span>Màu tiêu đề + thứ</span>
+            <input id="mau-tieu-de-va-thu-bang" type="color" value="#f7f7ff" />
+          </label>
+          <button class="nut-phu nut-ap-dung-mau" type="button" id="ap-dung-mau-bang">Áp dụng</button>
+        </div>
       </div>
-    {% endif %}
-    <div class="tieu-de-hang">
-      <h2>Bảng xếp lịch làm việc Phòng Khám Thú Y Cún Miu</h2>
-    </div>
-    {% if lich %}
-      <p class="goi-y">Mỗi ca cho phép tối đa 2 nhân viên. Hãy kéo thả vào đúng khung của từng ca trong ngày để tránh nhảy ca.</p>
-    {% endif %}
-    {% if lich %}
-      <div id="thong-bao-keo-tha" class="canh-bao" style="display: none;"></div>
-    {% endif %}
-    {% if lich %}
-      <div class="bang-lich">
-        <table>
+    </section>
+  {% endif %}
+
+  <section class="khung">
+    <div id="vung-chup-bang-lich">
+      <div class="tieu-de-hang tieu-de-bang-lich">
+        <h2 id="tieu-de-bang-xep-lich">Bảng xếp lịch làm việc Phòng Khám Thú Y Cún Miu</h2>
+      </div>
+      {% if lich %}
+        <div class="bang-lich" id="vung-bang-lich-chinh">
+        <table id="bang-lich-chinh">
           <thead>
             <tr>
               <th>Nhóm / Ca</th>
@@ -127,7 +144,7 @@
           </thead>
           <tbody>
             {% for nhom in lich.nhom_list %}
-              <tr style="background: {{ nhom.mau_nen }};">
+              <tr style="background: {{ nhom.mau_nen }};" data-ten-nhom="{{ nhom.ten_nhom }}">
                 <td>
                   <div class="ten-nhom">{{ ten_nhom_hien_thi(nhom.ten_nhom) }}</div>
                   <div class="ds-ca">
@@ -180,7 +197,7 @@
             {% endfor %}
           </tbody>
         </table>
-      </div>
+        </div>
       <div class="khung-spa-off">
         <h3>SPA OFF</h3>
         <div class="bang-spa-off">
@@ -210,19 +227,147 @@
           </table>
         </div>
       </div>
-    {% else %}
-      <p>Chưa có lịch tuần. Hãy bấm XẾP LỊCH để tạo.</p>
-    {% endif %}
+      {% else %}
+        <p>Chưa có lịch tuần. Hãy bấm XẾP LỊCH để tạo.</p>
+      {% endif %}
+    </div>
   </section>
   {% if lich %}
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         const lichTuanId = document.getElementById("luu-keo-tha")?.dataset.lichTuanId
         const toggleKhoaOff = document.getElementById("toggle-khoa-off")
         const KHOA_OFF_KEY = "xeplich_khoa_nv_off"
+        const MAU_TIEU_DE_THU_KEY = "xeplich_mau_tieu_de_va_thu"
+        let laLichNhap = {{ "true" if la_lich_nhap else "false" }}
+        let dangDieuHuongChuDong = false
         const changes = new Map()
         let draggedItem = null
         let khoaNvOff = true
+
+        const tatCanhBaoLichNhap = () => {
+          laLichNhap = false
+          const canhBaoNhap = document.getElementById("canh-bao-lich-nhap")
+          if (canhBaoNhap) {
+            canhBaoNhap.style.display = "none"
+          }
+        }
+
+        const goiApiLichNhap = async endpoint => {
+          if (!lichTuanId) return false
+          const res = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ lich_tuan_id: parseInt(lichTuanId, 10) }),
+            keepalive: true,
+          })
+          const data = await res.json()
+          return !!data.ok
+        }
+
+        const xacNhanRoiTrangKhiNhap = async () => {
+          if (!laLichNhap) return true
+          const coLuu = window.confirm("Lịch hiện tại chưa lưu chính thức. Bấm OK để Lưu trước khi rời trang, hoặc Cancel để KHÔNG lưu.")
+          if (coLuu) {
+            const ok = await goiApiLichNhap("/lich-nhap/luu")
+            if (!ok) {
+              window.alert("Không thể lưu lịch nháp. Vui lòng thử lại.")
+              return false
+            }
+            tatCanhBaoLichNhap()
+            return true
+          }
+          const ok = await goiApiLichNhap("/lich-nhap/huy")
+          if (!ok) {
+            window.alert("Không thể hủy lịch nháp. Vui lòng thử lại.")
+            return false
+          }
+          tatCanhBaoLichNhap()
+          return true
+        }
+
+        window.addEventListener("beforeunload", event => {
+          if (!laLichNhap) return
+          event.preventDefault()
+          event.returnValue = ""
+        })
+
+        window.addEventListener("pagehide", () => {
+          if (!laLichNhap || dangDieuHuongChuDong || !navigator.sendBeacon || !lichTuanId) return
+          const payload = JSON.stringify({ lich_tuan_id: parseInt(lichTuanId, 10) })
+          navigator.sendBeacon("/lich-nhap/huy", payload)
+        })
+
+        document.addEventListener(
+          "click",
+          async event => {
+            const link = event.target.closest("a[href]")
+            if (!link || !laLichNhap) return
+            if (event.defaultPrevented) return
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
+            const href = link.getAttribute("href") || ""
+            if (!href || href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("data:") || href.startsWith("blob:")) return
+            if (link.hasAttribute("download") || (link.getAttribute("target") || "").toLowerCase() === "_blank") return
+            event.preventDefault()
+            const coTheRoi = await xacNhanRoiTrangKhiNhap()
+            if (!coTheRoi) return
+            dangDieuHuongChuDong = true
+            window.location.href = link.href
+          },
+          true,
+        )
+
+        document.addEventListener(
+          "submit",
+          async event => {
+            const form = event.target
+            if (!(form instanceof HTMLFormElement) || !laLichNhap) return
+            if (form.dataset.boQuaCanhBaoLichNhap === "1") return
+            event.preventDefault()
+            const coTheRoi = await xacNhanRoiTrangKhiNhap()
+            if (!coTheRoi) return
+            dangDieuHuongChuDong = true
+            form.dataset.boQuaCanhBaoLichNhap = "1"
+            form.submit()
+          },
+          true,
+        )
+
+        const laHexMauHopLe = value => /^#[0-9a-f]{6}$/i.test(String(value || "").trim())
+        const apDungMauBang = mau => {
+          document.documentElement.style.setProperty("--mau-tieu-de-bang-lich", mau)
+          document.documentElement.style.setProperty("--mau-chu-thu-bang-lich", mau)
+          const tieuDeBang = document.getElementById("tieu-de-bang-xep-lich")
+          if (tieuDeBang) {
+            tieuDeBang.style.color = mau
+          }
+          document.querySelectorAll("#bang-lich-chinh thead th").forEach(th => {
+            th.style.color = mau
+          })
+        }
+        const pickerMauBang = document.getElementById("mau-tieu-de-va-thu-bang")
+        const nutApDungMauBang = document.getElementById("ap-dung-mau-bang")
+        let mauDangDung = "#f7f7ff"
+        try {
+          const mauDaLuu = localStorage.getItem(MAU_TIEU_DE_THU_KEY)
+          if (laHexMauHopLe(mauDaLuu)) {
+            mauDangDung = mauDaLuu
+          }
+        } catch (_) {}
+        apDungMauBang(mauDangDung)
+        if (pickerMauBang) {
+          pickerMauBang.value = mauDangDung
+        }
+        nutApDungMauBang?.addEventListener("click", () => {
+          if (!pickerMauBang) return
+          const mauMoi = pickerMauBang.value
+          if (!laHexMauHopLe(mauMoi)) return
+          apDungMauBang(mauMoi)
+          try {
+            localStorage.setItem(MAU_TIEU_DE_THU_KEY, mauMoi)
+          } catch (_) {}
+        })
 
         const isOffLocked = item => {
           if (!item) return false
@@ -433,8 +578,59 @@
           })
         })
 
+        const taiAnhBangLich = async lichId => {
+          if (typeof window.html2canvas !== "function") {
+            throw new Error("html2canvas chưa sẵn sàng")
+          }
+          const vungChup = document.getElementById("vung-chup-bang-lich")
+          const title = document.getElementById("tieu-de-bang-xep-lich")
+          const table = document.getElementById("bang-lich-chinh")
+          if (!vungChup || !title || !table) {
+            throw new Error("Không tìm thấy vùng bảng lịch")
+          }
+          const offRow = table.querySelector("tr[data-ten-nhom='OFF']")
+          const vungRect = vungChup.getBoundingClientRect()
+          const titleRect = title.getBoundingClientRect()
+          const tableRect = table.getBoundingClientRect()
+          const offRect = offRow ? offRow.getBoundingClientRect() : tableRect
+          const khungBangLich = vungChup.closest(".khung")
+          const mauNenAnh = getComputedStyle(khungBangLich || vungChup).backgroundColor || "#ead9c6"
+          const canvasRaw = await window.html2canvas(vungChup, {
+            backgroundColor: mauNenAnh,
+            useCORS: true,
+            scale: 2,
+            windowWidth: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
+            windowHeight: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight),
+          })
+          const tiLe = canvasRaw.width / Math.max(1, vungRect.width)
+          const topTrongVung = Math.max(0, titleRect.top - vungRect.top - 8)
+          const bottomTrongVung = Math.max(topTrongVung + 1, offRect.bottom - vungRect.top + 8)
+          const cropTop = Math.max(0, Math.floor(topTrongVung * tiLe))
+          const cropBottom = Math.min(canvasRaw.height, Math.ceil(bottomTrongVung * tiLe))
+          const cropHeight = Math.max(1, cropBottom - cropTop)
+          const canvas = document.createElement("canvas")
+          canvas.width = canvasRaw.width
+          canvas.height = cropHeight
+          const ctx = canvas.getContext("2d")
+          if (!ctx) {
+            throw new Error("Không tạo được canvas")
+          }
+          ctx.drawImage(canvasRaw, 0, cropTop, canvasRaw.width, cropHeight, 0, 0, canvasRaw.width, cropHeight)
+          const now = new Date()
+          const y = now.getFullYear()
+          const m = String(now.getMonth() + 1).padStart(2, "0")
+          const d = String(now.getDate()).padStart(2, "0")
+          const link = document.createElement("a")
+          link.href = canvas.toDataURL("image/png")
+          link.download = `lich-da-xep-${lichId || "tuan"}-${y}${m}${d}.png`
+          document.body.appendChild(link)
+          link.click()
+          link.remove()
+        }
+
         document.getElementById("luu-keo-tha")?.addEventListener("click", async () => {
-          const thongBao = document.getElementById("thong-bao-keo-tha")
+          const ketQuaBox = document.getElementById("ket-qua-luu-kiem-tra")
+          const ketQuaNoiDung = document.getElementById("ket-qua-luu-kiem-tra-noi-dung")
           if (!lichTuanId) return
           const spaOffNotes = {}
           document.querySelectorAll(".ghi-chu-spa-off").forEach(textarea => {
@@ -455,34 +651,40 @@
               body: JSON.stringify(payload),
             })
             const data = await res.json()
-            if (thongBao) {
-                thongBao.style.display = "block"
-                if (data.ok) {
-                  changes.clear()
+            if (ketQuaBox && ketQuaNoiDung) {
+              ketQuaBox.style.display = "block"
+              let daTaiAnh = false
+              try {
+                await taiAnhBangLich(lichTuanId)
+                daTaiAnh = true
+              } catch (_) {}
+              if (data.ok) {
+                changes.clear()
+                tatCanhBaoLichNhap()
                 if (data.errors && data.errors.length > 0) {
-                  thongBao.textContent = `Đã lưu kéo thả, nhưng có lỗi ràng buộc: ${data.errors[0]}`
-                  thongBao.style.background = "rgba(255, 214, 102, 0.2)"
-                  thongBao.style.borderColor = "rgba(255, 214, 102, 0.6)"
+                  ketQuaNoiDung.textContent = `Đã lưu lịch, nhưng có lỗi ràng buộc: ${data.errors[0]}${daTaiAnh ? " | Đã tải ảnh." : " | Chưa tải được ảnh."}`
+                  ketQuaBox.style.background = "rgba(255, 214, 102, 0.2)"
+                  ketQuaBox.style.borderColor = "rgba(255, 214, 102, 0.6)"
                 } else {
-                  thongBao.textContent = "Đã lưu lịch và ghi chú SPA OFF."
-                  thongBao.style.background = "rgba(94, 255, 180, 0.18)"
-                  thongBao.style.borderColor = "rgba(94, 255, 180, 0.6)"
+                  ketQuaNoiDung.textContent = daTaiAnh ? "Đã lưu lịch, đã tải ảnh và ghi chú SPA OFF." : "Đã lưu lịch và ghi chú SPA OFF (chưa tải được ảnh)."
+                  ketQuaBox.style.background = "rgba(94, 255, 180, 0.18)"
+                  ketQuaBox.style.borderColor = "rgba(94, 255, 180, 0.6)"
                 }
-                setTimeout(() => {
-                  window.location.reload()
-                }, 300)
               } else {
-                thongBao.textContent = data.message || "Không thể lưu kéo thả."
-                thongBao.style.background = "rgba(255, 104, 104, 0.2)"
-                thongBao.style.borderColor = "rgba(255, 104, 104, 0.5)"
+                const loiLuu = data.message || "Không thể lưu kéo thả."
+                ketQuaNoiDung.textContent = `${loiLuu}${daTaiAnh ? " | Đã tải ảnh." : " | Chưa tải được ảnh."}`
+                ketQuaBox.style.background = "rgba(255, 104, 104, 0.2)"
+                ketQuaBox.style.borderColor = "rgba(255, 104, 104, 0.5)"
               }
             }
           } catch (error) {
-            if (thongBao) {
-              thongBao.style.display = "block"
-              thongBao.textContent = "Không thể lưu kéo thả do lỗi kết nối."
-              thongBao.style.background = "rgba(255, 104, 104, 0.2)"
-              thongBao.style.borderColor = "rgba(255, 104, 104, 0.5)"
+            const ketQuaBox = document.getElementById("ket-qua-luu-kiem-tra")
+            const ketQuaNoiDung = document.getElementById("ket-qua-luu-kiem-tra-noi-dung")
+            if (ketQuaBox && ketQuaNoiDung) {
+              ketQuaBox.style.display = "block"
+              ketQuaNoiDung.textContent = "Không thể lưu kéo thả do lỗi kết nối."
+              ketQuaBox.style.background = "rgba(255, 104, 104, 0.2)"
+              ketQuaBox.style.borderColor = "rgba(255, 104, 104, 0.5)"
             }
           }
         })

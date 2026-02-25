@@ -351,3 +351,126 @@ This will wipe existing data and re-seed the updated dataset.
   - For groups with shift lanes (`326TTV`, `197LT5`, `796ADV`, `CN`), drop is now accepted only when pointer is inside a `.ca-lane`.
   - Dropping into blank area of the parent day-cell is rejected, preventing creation of visual "row 5/row 4" beyond configured shift count.
 - Added event propagation guard on dragover/drop (`stopPropagation`) to avoid parent `.o-lich` handler re-processing lane drops.
+
+## Latest Update (2026-02-25, allow save with branch-profile violation)
+
+- Updated drag-save behavior in `/cap-nhat-lich` for employee-branch profile mismatch:
+  - Rule `Nhân viên không thuộc chi nhánh` no longer blocks save/commit in drag-drop flow.
+  - Schedule changes are persisted first, then violation is returned in response `errors[]` so UI still warns users.
+- Extended post-save validation (`kiem_tra_lich`) with branch-profile check:
+  - Detects assignments where `nhan_vien.chi_nhanh` does not contain assigned `chi_nhanh_id`.
+  - Adds explicit violation message including employee name, branch name, and date for traceability.
+- Outcome:
+  - Manual operations can continue even with intentional cross-branch assignment.
+  - System still reports the violation clearly instead of silently ignoring it.
+
+## Latest Update (2026-02-25, auto screenshot download on save)
+
+- Updated weekly board save action UI:
+  - Renamed button label from `Lưu kéo thả` to `Lưu Lịch Đã Xếp`.
+- Added automatic screenshot export right after successful save:
+  - Frontend loads `html2canvas` and captures a cropped region from schedule title `Bảng xếp lịch làm việc Phòng Khám Thú Y Cún Miu` down to the bottom of the `OFF` row.
+  - Triggered immediately after `/cap-nhat-lich` returns `ok=true` (both normal save and save-with-constraint-warnings).
+  - Auto-downloads PNG file to user machine with date-stamped filename.
+- UX behavior:
+  - Save flow remains unchanged for DB persistence.
+  - If screenshot succeeds, success/warning toast includes `Đã tải ảnh`.
+  - If screenshot fails, save is still kept and toast clearly states image download failed.
+
+## Latest Update (2026-02-25, screenshot scope fix + top result banner)
+
+- Fixed screenshot target selection on weekly board save:
+  - Root-cause: selector used `.bang-lich table` and matched the first table (`Ngày nghỉ đã nhập`) instead of the schedule board.
+  - Added dedicated schedule table id `#bang-lich-chinh` and scoped OFF-row lookup inside that table.
+  - Screenshot crop now consistently uses schedule title -> bottom of OFF row in the intended board.
+- Moved save/check result message to top operation area:
+  - Added unified banner in hero section with fixed label `Kết quả thao tác lưu/kiểm tra:`.
+  - Save success/warning/error text now fills the banner content instead of rendering below schedule title.
+  - Kept existing save + auto-download behavior unchanged.
+
+## Latest Update (2026-02-25, separate action panel + screenshot wrapper capture)
+
+- Split schedule action controls into a dedicated panel:
+  - Moved `Quản lý lịch đã xếp / Tải Excel / Kiểm tra ràng buộc / Khóa NV OFF / Tắt tô sáng / Lưu Lịch Đã Xếp` into its own `section.khung`.
+  - Schedule board section now focuses on title + board content only, matching the same separation style as other blocks like `Ngày nghỉ đã nhập`.
+- Refined screenshot capture pipeline to avoid toolbar leakage:
+  - Added wrapper `#vung-chup-bang-lich` and render screenshot from this wrapper instead of full `document.body`.
+  - Cropping is computed inside wrapper coordinates: top at schedule title and bottom at OFF-row edge.
+  - Result excludes the action-toolbar panel above while keeping expected schedule area.
+
+## Latest Update (2026-02-25, screenshot pinky background + persistent save banner)
+
+- Fixed black background in downloaded screenshot on light themes (notably Pinky):
+  - Export now resolves background color from the current schedule panel (`.khung`) and passes it to `html2canvas.backgroundColor`.
+  - Prevents transparent regions from rendering as black in PNG viewers.
+- Changed save UX so operation result remains readable:
+  - Removed automatic `window.location.reload()` after successful save.
+  - Banner `Kết quả thao tác lưu/kiểm tra:` now stays visible until the next save/check updates it.
+  - Existing behavior of replacing old message with the latest result is preserved.
+
+## Latest Update (2026-02-25, always screenshot on failed save + notes relocation)
+
+- Updated drag-save feedback flow on homepage (`index.html`):
+  - Screenshot download now runs for every `/cap-nhat-lich` response, including `ok=false` (save blocked).
+  - When save is blocked, banner still reports save error and appends screenshot status (`Đã tải ảnh` / `Chưa tải được ảnh`).
+- Repositioned operational hint text for better visibility:
+  - Removed inline hint above schedule table area.
+  - Added a dedicated line under top result banner with label `Notes:` and content about max 2 staff per shift + correct lane drop target.
+
+## Latest Update (2026-02-25, centered board title + live color picker)
+
+- Centered the weekly board heading block:
+  - `Bảng xếp lịch làm việc Phòng Khám Thú Y Cún Miu` is now centered in the schedule area for clearer visual focus.
+- Added on-page color customization for schedule board identity:
+  - New toolbar color controls: `Màu tiêu đề`, `Màu chữ thứ`, `Màu nền thứ`.
+  - Colors are applied via CSS variables (`--mau-tieu-de-bang-lich`, `--mau-chu-thu-bang-lich`, `--mau-nen-thu-bang-lich`) so updates are instant.
+  - Selected colors persist per browser via `localStorage` (`xeplich_mau_tieu_de_bang`, `xeplich_mau_chu_thu_bang`, `xeplich_mau_nen_thu_bang`).
+- Screenshot consistency:
+  - Existing `html2canvas` flow remains unchanged but now captures the board with user-selected colors exactly as rendered on screen.
+
+## Latest Update (2026-02-25, single color picker + explicit apply action)
+
+- Simplified color customization UX on schedule toolbar:
+  - Replaced 3 separate pickers with one unified color picker `Màu tiêu đề + thứ`.
+  - Added explicit `Áp dụng` button next to picker; color changes only when clicking this button.
+- Applied color scope:
+  - The chosen color now controls both schedule title (`Bảng xếp lịch...`) and text color of weekday/date headers in `#bang-lich-chinh thead th`.
+  - Header background color customization was removed to match user request for a single-color flow.
+- Persistence and screenshot behavior:
+  - Selected/applied color is stored in browser `localStorage` key `xeplich_mau_tieu_de_va_thu`.
+  - Save + screenshot flow keeps capturing the currently applied color exactly as displayed.
+
+## Latest Update (2026-02-25, force-apply title/header color to avoid theme/cache override)
+
+- Hardened color apply action for schedule board styling:
+  - Root-cause observed in operation: in some sessions, CSS variable update was not visibly reflected after clicking `Áp dụng` (likely stale CSS/theme precedence/cache).
+  - Updated `apDungMauBang(...)` to apply color in two layers:
+    1) keep writing CSS vars (`--mau-tieu-de-bang-lich`, `--mau-chu-thu-bang-lich`), and
+    2) set inline style directly on `#tieu-de-bang-xep-lich` and all `#bang-lich-chinh thead th`.
+- Outcome:
+  - Click `Áp dụng` now gives immediate visible color change for both target texts.
+  - Screenshot after save remains consistent because rendered DOM already has the inline/applied color.
+
+## Latest Update (2026-02-25, draft-first scheduling + leave-page save/discard confirm)
+
+- Changed schedule generation flow to draft-first:
+  - `POST /xep-lich` and `POST /tu-xep-lich` now still generate schedule records for editing, but they are marked as draft status (`NHAP_DA_XEP` / `NHAP_TU_XEP`) right after creation.
+  - Draft schedules are excluded from default latest-schedule fallback and from `Lịch đã xếp` listing (`danh_sach_lich_tuan` filters out `NHAP_%`).
+- Added explicit draft lifecycle APIs:
+  - `POST /lich-nhap/luu`: finalize draft status to official (`DA_XEP` or `TU_XEP`).
+  - `POST /lich-nhap/huy`: delete draft schedule (cascade removes details).
+  - `POST /cap-nhat-lich` now auto-finalizes draft status when save succeeds, and also supports finalize-only (no drag changes) for draft records.
+- Added frontend leave-page guard for draft schedule on homepage:
+  - Shows top warning banner when current schedule is draft.
+  - Intercepts in-app link/form navigation and prompts: OK = save draft, Cancel = discard draft.
+  - Uses browser native `beforeunload` warning for close/reload while draft is unsaved.
+  - Uses `pagehide + sendBeacon('/lich-nhap/huy')` to best-effort discard draft if user leaves without explicit save.
+
+## Latest Update (2026-02-25, exclude save-download links from draft leave guard)
+
+- Fixed false prompt when clicking `Lưu Lịch Đã Xếp` in draft mode:
+  - Root-cause: leave-page click guard intercepted generated `<a>` download link used by screenshot auto-download and treated it as page navigation.
+  - Updated guard filter to ignore non-navigation links: `download` attribute, `href` starting with `data:`/`blob:`, and `target="_blank"`.
+- Outcome:
+  - Saving schedule no longer triggers the leave-page confirm popup.
+  - Draft confirm behavior is preserved for actual in-app navigation away from the page.
