@@ -1,6 +1,6 @@
 (function () {
   var storageKey = "cunmiu_theme";
-  var themes = ["default", "pinky", "light-green"];
+  var themes = ["default", "pinky", "light-green", "aster"];
 
   function syncBodyClass(theme) {
     if (!document.body) return;
@@ -32,7 +32,7 @@
     var dock = document.createElement("div");
     dock.id = "theme-dock";
     dock.className = "theme-dock";
-    dock.innerHTML = '<label for="theme-select">Theme</label><select id="theme-select"><option value="default">Default</option><option value="pinky">Pinky</option><option value="light-green">Light Green</option></select>';
+    dock.innerHTML = '<label for="theme-select">Theme</label><select id="theme-select"><option value="default">Default</option><option value="aster">Aster</option><option value="pinky">Pinky</option><option value="light-green">Light Green</option></select>';
     document.body.appendChild(dock);
     var select = document.getElementById("theme-select");
     select.value = currentTheme();

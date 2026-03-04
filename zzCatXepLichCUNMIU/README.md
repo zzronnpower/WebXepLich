@@ -101,3 +101,42 @@ He thong tu dong tao du lieu mau khi khoi dong lan dau:
 
 - Bien moi truong `CO_SO_DU_LIEU_URL` duoc khai bao trong `docker-compose.yml`
 - File Excel tai xuong co ten `OUTPUT_Lich_Lam_Viec.xlsx`
+
+## Van hanh production (Phase 3)
+
+- Healthcheck endpoint: `GET /healthz`
+- Readiness endpoint: `GET /readyz` (kiem tra DB query `SELECT 1`)
+- Runtime metrics endpoint: `GET /metrics`
+  - tra ve tong hop metric HTTP (count/error/avg_ms/max_ms)
+  - tra ve metric solver (`xep_lich`, `tu_xep_lich`)
+- Prometheus text metrics: `GET /metrics/prometheus`
+- Request ID middleware:
+  - nhan `x-request-id` neu client gui len, neu khong se auto tao
+  - response se co header `X-Request-ID`
+- Guard endpoint nguy hiem:
+  - tat ca route `POST` co duong dan chua `/xoa` se yeu cau `ADMIN_TOKEN`
+  - neu set env `ADMIN_TOKEN`, request phai gui dung token qua `x-admin-token` hoac `admin_token` query
+
+### Chay job xep lich nen (khong block request)
+
+- Tao job:
+  - `POST /api/jobs/xep-lich`
+  - payload JSON: `{ "flow": "xep_lich" | "tu_xep_lich", "ngay_bat_dau": "YYYY-MM-DD" }`
+- Theo doi job:
+  - `GET /api/jobs/{job_id}`
+  - tra ve trang thai `queued|running|done|failed`, message va `lich_tuan_id` neu thanh cong
+
+### Checklist backup/restore dinh ky
+
+1. Dump DB:
+   - `docker compose exec -T db pg_dump --clean --if-exists -U lich_user -d lich_lam_viec > backups/lich_dump_$(date +%Y%m%d_%H%M%S).sql`
+2. Nen dump:
+   - `gzip -f backups/lich_dump_*.sql`
+3. Kiem tra file backup co tao thanh cong va co kich thuoc > 0
+4. Thu restore tren moi truong test (hoac may clone) it nhat 1 lan/tuần
+
+Co the dung script san co:
+
+```bash
+./scripts/ops_backup_verify.sh
+```

@@ -246,15 +246,19 @@ def giai_lich_tuan(
 
     mo_hinh = cp_model.CpModel()
     bien_x = {}
+    chi_nhanh_theo_nv = {nv.id: {cn.id for cn in nv.chi_nhanh} for nv in nhan_vien_list}
+    vai_tro_theo_nv = {nv.id: {vt.id for vt in nv.vai_tro} for nv in nhan_vien_list}
     for nv in nhan_vien_list:
+        chi_nhanh_hop_le = chi_nhanh_theo_nv.get(nv.id, set())
+        vai_tro_hop_le = vai_tro_theo_nv.get(nv.id, set())
         for nc in nhu_cau_info:
             if nv.id in ngay_nghi_map.get(nc["ngay"], set()):
                 continue
-            if nc["chi_nhanh_id"] and nv.chi_nhanh:
-                if nc["chi_nhanh_id"] not in {cn.id for cn in nv.chi_nhanh}:
+            if nc["chi_nhanh_id"] and chi_nhanh_hop_le:
+                if nc["chi_nhanh_id"] not in chi_nhanh_hop_le:
                     continue
             if nc["vai_tro_yeu_cau_id"]:
-                if nc["vai_tro_yeu_cau_id"] not in {vt.id for vt in nv.vai_tro}:
+                if nc["vai_tro_yeu_cau_id"] not in vai_tro_hop_le:
                     continue
             bien_x[(nv.id, nc["id"])] = mo_hinh.NewBoolVar(f"x_{nv.id}_{nc['id']}")
 
@@ -341,6 +345,7 @@ def giai_lich_tuan(
 
     if trong_so.get("han_che_ca_muon_sang", 0) > 0:
         for nv in nhan_vien_list:
+            he_so_nv = uu_tien_nv_map.get(nv.id, {})
             for nc_muon in nhu_cau_info:
                 if not nc_muon["la_ca_muon"]:
                     continue

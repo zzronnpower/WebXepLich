@@ -3,11 +3,15 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 import json
+import logging
+import os
+import threading
 import time
 from io import BytesIO
+from uuid import uuid4
 
-from fastapi import Depends, FastAPI, Form, Request
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi import Depends, FastAPI, Form, HTTPException, Request
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, or_, text
@@ -19,19 +23,109 @@ from backend.app.scheduler.solver import (
     danh_sach_ngay_trong_tuan,
     giai_lich_tuan,
     lay_trong_so,
-    tao_lich_tu_xep_tuan,
     tao_nhu_cau_chich_ngoai,
 )
+from backend.app.services.schedule_service import chay_tu_xep_tuan, chay_xep_lich_tuan, lay_thong_ke_xep_lich
+from backend.app.services.job_service import lay_job, tao_job_xep_lich
 from backend.app.seed import tao_du_lieu_mau
 
 
 ung_dung = FastAPI(title="Lich lam viec")
 ung_dung.mount("/static", StaticFiles(directory="backend/app/static"), name="static")
 giao_dien = Jinja2Templates(directory="backend/app/templates")
+logger = logging.getLogger("xeplich.web")
+_http_metric_lock = threading.Lock()
+_http_metric: dict[str, dict[str, float | int]] = {}
+
+
+def _khoi_tao_logging() -> None:
+    if logging.getLogger().handlers:
+        return
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+
+
+def _ghi_nhan_http_metric(method: str, path: str, status_code: int, duration_ms: float) -> None:
+    key = f"{method.upper()} {path}"
+    with _http_metric_lock:
+        item = _http_metric.get(key)
+        if item is None:
+            item = {"count": 0, "errors": 0, "sum_ms": 0.0, "max_ms": 0.0}
+            _http_metric[key] = item
+        item["count"] = int(item["count"]) + 1
+        item["sum_ms"] = float(item["sum_ms"]) + duration_ms
+        item["max_ms"] = max(float(item["max_ms"]), duration_ms)
+        if status_code >= 400:
+            item["errors"] = int(item["errors"]) + 1
+
+
+def _tong_hop_http_metric() -> dict[str, dict[str, float | int]]:
+    with _http_metric_lock:
+        result: dict[str, dict[str, float | int]] = {}
+        for key, item in _http_metric.items():
+            count = int(item["count"])
+            avg_ms = round(float(item["sum_ms"]) / count, 2) if count else 0.0
+            result[key] = {
+                "count": count,
+                "errors": int(item["errors"]),
+                "avg_ms": avg_ms,
+                "max_ms": round(float(item["max_ms"]), 2),
+            }
+        return result
+
+
+def _la_route_nhay_cam(path: str, method: str) -> bool:
+    if method.upper() != "POST":
+        return False
+    return "/xoa" in path
+
+
+def _doc_admin_token_tu_request(request: Request) -> str | None:
+    return request.headers.get("x-admin-token") or request.query_params.get("admin_token")
+
+
+@ung_dung.middleware("http")
+async def middleware_request_id(request: Request, call_next):
+    request_id = request.headers.get("x-request-id") or str(uuid4())
+    request.state.request_id = request_id
+    token_he_thong = os.getenv("ADMIN_TOKEN", "").strip()
+    if token_he_thong and _la_route_nhay_cam(request.url.path, request.method):
+        token_gui_len = _doc_admin_token_tu_request(request)
+        if token_gui_len != token_he_thong:
+            return JSONResponse(status_code=403, content={"detail": "Thiếu hoặc sai ADMIN_TOKEN cho thao tác này."})
+    bat_dau = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        duration_ms = round((time.perf_counter() - bat_dau) * 1000.0, 2)
+        _ghi_nhan_http_metric(request.method, request.url.path, 500, duration_ms)
+        logger.exception(
+            "http_request_error req_id=%s method=%s path=%s duration_ms=%s",
+            request_id,
+            request.method,
+            request.url.path,
+            duration_ms,
+        )
+        raise
+    duration_ms = round((time.perf_counter() - bat_dau) * 1000.0, 2)
+    _ghi_nhan_http_metric(request.method, request.url.path, response.status_code, duration_ms)
+    response.headers["X-Request-ID"] = request_id
+    logger.info(
+        "http_request req_id=%s method=%s path=%s status=%s duration_ms=%s",
+        request_id,
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+    return response
 
 
 @ung_dung.on_event("startup")
 def khoi_tao():
+    _khoi_tao_logging()
     for _ in range(10):
         try:
             CoSo.metadata.create_all(bind=dong_co)
@@ -44,6 +138,7 @@ def khoi_tao():
                 dam_bao_cot_ten_lich(phien)
                 dam_bao_cot_spa_off_ghi_chu(phien)
                 dam_bao_trong_so(phien)
+                dam_bao_chi_muc_hieu_nang(phien)
             return
         except Exception:
             time.sleep(1)
@@ -57,6 +152,7 @@ def khoi_tao():
         dam_bao_cot_ten_lich(phien)
         dam_bao_cot_spa_off_ghi_chu(phien)
         dam_bao_trong_so(phien)
+        dam_bao_chi_muc_hieu_nang(phien)
 
 
 THU_TU_NHOM_MAC_DINH = {
@@ -124,8 +220,51 @@ def parse_trong_so_form(form) -> list[int]:
         ts_id = form.get(f"trong_so_{idx}_id")
         if not ts_id:
             continue
-        ket_qua.append(int(ts_id))
+        try:
+            parsed = _parse_int_or_none(ts_id, f"trong_so_{idx}_id")
+        except ValueError:
+            continue
+        if parsed is not None:
+            ket_qua.append(parsed)
     return ket_qua
+
+
+def _parse_int_or_none(raw_value, ten_truong: str) -> int | None:
+    if raw_value in (None, ""):
+        return None
+    try:
+        return int(str(raw_value).strip())
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Trường '{ten_truong}' phải là số nguyên hợp lệ.") from exc
+
+
+def _parse_int_required(raw_value, ten_truong: str) -> int:
+    parsed = _parse_int_or_none(raw_value, ten_truong)
+    if parsed is None:
+        raise ValueError(f"Thiếu trường bắt buộc: {ten_truong}.")
+    return parsed
+
+
+def _parse_date_required(raw_value, ten_truong: str = "ngay") -> date:
+    if raw_value in (None, ""):
+        raise ValueError(f"Thiếu trường bắt buộc: {ten_truong}.")
+    try:
+        return datetime.fromisoformat(str(raw_value).strip()).date()
+    except ValueError as exc:
+        raise ValueError(f"Trường '{ten_truong}' không đúng định dạng YYYY-MM-DD.") from exc
+
+
+def kiem_tra_admin_token(request: Request, admin_token: str | None = None) -> None:
+    token_he_thong = os.getenv("ADMIN_TOKEN", "").strip()
+    if not token_he_thong:
+        return
+    token_gui_len = (
+        request.headers.get("x-admin-token")
+        or admin_token
+        or request.query_params.get("admin_token")
+    )
+    if token_gui_len != token_he_thong:
+        raise HTTPException(status_code=403, detail="Thiếu hoặc sai ADMIN_TOKEN cho thao tác này.")
 
 
 def danh_sach_ca_theo_nhom() -> dict[str, list[str]]:
@@ -268,6 +407,55 @@ def dam_bao_cot_spa_off_ghi_chu(phien: Session):
 
 def dam_bao_trong_so(phien: Session):
     crud.tao_hoac_cap_nhat_trong_so(phien, "khong_di_chich_ngoai", 6)
+
+
+def dam_bao_chi_muc_hieu_nang(phien: Session):
+    cau_lenh = [
+        "CREATE INDEX IF NOT EXISTS idx_ngay_nghi_ngay ON ngay_nghi (ngay)",
+        "CREATE INDEX IF NOT EXISTS idx_ngay_nghi_nv_ngay ON ngay_nghi (nhan_vien_id, ngay)",
+        "CREATE INDEX IF NOT EXISTS idx_nhu_cau_ca_ngay ON nhu_cau_ca (ngay)",
+        "CREATE INDEX IF NOT EXISTS idx_nhu_cau_ca_ngay_cn_ca ON nhu_cau_ca (ngay, chi_nhanh_id, ca_id)",
+        "CREATE INDEX IF NOT EXISTS idx_lich_chi_tiet_lich_ngay ON lich_chi_tiet (lich_tuan_id, ngay)",
+        "CREATE INDEX IF NOT EXISTS idx_lich_chi_tiet_nv_ngay ON lich_chi_tiet (nhan_vien_id, ngay)",
+        "CREATE INDEX IF NOT EXISTS idx_lich_tuan_trang_thai ON lich_tuan (trang_thai)",
+    ]
+    try:
+        for sql in cau_lenh:
+            phien.execute(text(sql))
+        phien.commit()
+    except Exception:
+        phien.rollback()
+
+
+def tao_context_trang_chu(
+    phien: Session,
+    ngay_bat_dau: date,
+    *,
+    loi: str | None = None,
+    thieu_nhu_cau: list[str] | None = None,
+    loi_ngay_nghi: str | None = None,
+) -> dict:
+    ngay_list_nghi, ngay_nghi_theo_ngay = tai_du_lieu_ngay_nghi(phien, ngay_bat_dau)
+    context = {
+        "lich": lay_lich_hien_thi(phien, None),
+        "la_lich_nhap": False,
+        "ds_lich_tuan": danh_sach_lich_tuan(phien),
+        "danh_sach_ca_nhom": danh_sach_ca_theo_nhom(),
+        "ca_theo_ten": tao_ca_theo_ten(phien),
+        "ten_thu": ten_thu,
+        "ten_nhom_hien_thi": ten_nhom_hien_thi,
+        "ngay_mac_dinh": ngay_bat_dau,
+        "ds_nhan_vien": phien.query(models.NhanVien).order_by(models.NhanVien.ten_nv).all(),
+        "ngay_list_nghi": ngay_list_nghi,
+        "ngay_nghi_theo_ngay": ngay_nghi_theo_ngay,
+    }
+    if loi:
+        context["loi"] = loi
+    if thieu_nhu_cau:
+        context["thieu_nhu_cau"] = thieu_nhu_cau
+    if loi_ngay_nghi:
+        context["loi_ngay_nghi"] = loi_ngay_nghi
+    return context
 
 
 def tai_du_lieu_ngay_nghi(phien: Session, ngay_bat_dau: date) -> tuple[list[date], dict[date, list[models.NgayNghi]]]:
@@ -595,6 +783,93 @@ def xoa_lich_da_xep(lich_tuan_id: int, phien: Session = Depends(lay_phien_lam_vi
 @ung_dung.get("/chatlog")
 def chatlog(request: Request):
     return giao_dien.TemplateResponse("chatlog.html", {"request": request})
+
+
+@ung_dung.get("/healthz")
+def healthz() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@ung_dung.get("/readyz")
+def readyz(phien: Session = Depends(lay_phien_lam_viec)) -> dict[str, str]:
+    try:
+        phien.execute(text("SELECT 1"))
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"db_not_ready: {exc}") from exc
+    return {"status": "ready"}
+
+
+@ung_dung.get("/metrics")
+def metrics(request: Request) -> dict[str, object]:
+    return {
+        "request_id": getattr(request.state, "request_id", ""),
+        "http": _tong_hop_http_metric(),
+        "solver": lay_thong_ke_xep_lich(),
+    }
+
+
+@ung_dung.get("/metrics/prometheus")
+def metrics_prometheus() -> PlainTextResponse:
+    lines: list[str] = []
+    for key, item in _tong_hop_http_metric().items():
+        metric_key = key.lower().replace(" ", "_").replace("/", "_").replace("-", "_")
+        lines.append(f'http_requests_total{{route="{metric_key}"}} {item["count"]}')
+        lines.append(f'http_requests_errors_total{{route="{metric_key}"}} {item["errors"]}')
+        lines.append(f'http_request_avg_ms{{route="{metric_key}"}} {item["avg_ms"]}')
+        lines.append(f'http_request_max_ms{{route="{metric_key}"}} {item["max_ms"]}')
+    for flow, item in lay_thong_ke_xep_lich().items():
+        lines.append(f'solver_runs_total{{flow="{flow}"}} {item["count"]}')
+        lines.append(f'solver_runs_success_total{{flow="{flow}"}} {item["success"]}')
+        lines.append(f'solver_runs_failed_total{{flow="{flow}"}} {item["failed"]}')
+        lines.append(f'solver_run_avg_ms{{flow="{flow}"}} {item["avg_ms"]}')
+        lines.append(f'solver_run_max_ms{{flow="{flow}"}} {item["max_ms"]}')
+    return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain; version=0.0.4")
+
+
+@ung_dung.post("/api/jobs/xep-lich")
+async def tao_job_xep_lich_api(request: Request) -> dict[str, object]:
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    flow = str(payload.get("flow") or "xep_lich")
+    ngay_bat_dau = str(payload.get("ngay_bat_dau") or "").strip()
+    if not ngay_bat_dau:
+        raise HTTPException(status_code=400, detail="Thieu ngay_bat_dau")
+    try:
+        datetime.fromisoformat(ngay_bat_dau).date()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="ngay_bat_dau khong dung dinh dang YYYY-MM-DD") from exc
+    try:
+        job = tao_job_xep_lich(flow=flow, ngay_bat_dau_iso=ngay_bat_dau)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "ok": True,
+        "job_id": job.job_id,
+        "status": job.status,
+        "flow": job.flow,
+        "ngay_bat_dau": job.ngay_bat_dau,
+    }
+
+
+@ung_dung.get("/api/jobs/{job_id}")
+def xem_job_xep_lich(job_id: str) -> dict[str, object]:
+    job = lay_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Khong tim thay job")
+    return {
+        "job_id": job.job_id,
+        "flow": job.flow,
+        "ngay_bat_dau": job.ngay_bat_dau,
+        "status": job.status,
+        "message": job.message,
+        "created_at": job.created_at,
+        "started_at": job.started_at,
+        "finished_at": job.finished_at,
+        "success": job.success,
+        "lich_tuan_id": job.lich_tuan_id,
+    }
 
 
 @ung_dung.get("/kiem-tra")
@@ -967,33 +1242,17 @@ def xep_lich(
     ngay_bat_dau: date = Form(...),
     phien: Session = Depends(lay_phien_lam_viec),
 ):
-    ngay_bat_dau = ngay_bat_dau - timedelta(days=ngay_bat_dau.weekday())
-    ket_qua = giai_lich_tuan(phien, ngay_bat_dau)
-    if ket_qua.thanh_cong and ket_qua.lich_tuan_id:
-        lich = phien.query(models.LichTuan).filter(models.LichTuan.id == ket_qua.lich_tuan_id).first()
-        if lich:
-            lich.trang_thai = tao_trang_thai_nhap("DA_XEP")
-            phien.commit()
+    ket_qua, ngay_bat_dau = chay_xep_lich_tuan(phien, ngay_bat_dau)
     if not ket_qua.thanh_cong:
-        ngay_list_nghi, ngay_nghi_theo_ngay = tai_du_lieu_ngay_nghi(phien, ngay_bat_dau)
+        context = tao_context_trang_chu(
+            phien,
+            ngay_bat_dau,
+            loi=ket_qua.thong_bao,
+            thieu_nhu_cau=ket_qua.thieu_nhu_cau,
+        )
         return giao_dien.TemplateResponse(
             "index.html",
-            {
-                "request": request,
-                "loi": ket_qua.thong_bao,
-                "thieu_nhu_cau": ket_qua.thieu_nhu_cau,
-                "lich": lay_lich_hien_thi(phien, None),
-                "la_lich_nhap": False,
-                "ds_lich_tuan": danh_sach_lich_tuan(phien),
-                "danh_sach_ca_nhom": danh_sach_ca_theo_nhom(),
-                "ca_theo_ten": tao_ca_theo_ten(phien),
-                "ten_thu": ten_thu,
-                "ten_nhom_hien_thi": ten_nhom_hien_thi,
-                "ngay_mac_dinh": ngay_bat_dau,
-                "ds_nhan_vien": phien.query(models.NhanVien).order_by(models.NhanVien.ten_nv).all(),
-                "ngay_list_nghi": ngay_list_nghi,
-                "ngay_nghi_theo_ngay": ngay_nghi_theo_ngay,
-            },
+            {"request": request, **context},
         )
     return RedirectResponse(url=f"/?lich_tuan_id={ket_qua.lich_tuan_id}", status_code=303)
 
@@ -1004,33 +1263,17 @@ def tu_xep_lich(
     ngay_bat_dau: date = Form(...),
     phien: Session = Depends(lay_phien_lam_viec),
 ):
-    ngay_bat_dau = ngay_bat_dau - timedelta(days=ngay_bat_dau.weekday())
-    ket_qua = tao_lich_tu_xep_tuan(phien, ngay_bat_dau)
-    if ket_qua.thanh_cong and ket_qua.lich_tuan_id:
-        lich = phien.query(models.LichTuan).filter(models.LichTuan.id == ket_qua.lich_tuan_id).first()
-        if lich:
-            lich.trang_thai = tao_trang_thai_nhap("TU_XEP")
-            phien.commit()
+    ket_qua, ngay_bat_dau = chay_tu_xep_tuan(phien, ngay_bat_dau)
     if not ket_qua.thanh_cong:
-        ngay_list_nghi, ngay_nghi_theo_ngay = tai_du_lieu_ngay_nghi(phien, ngay_bat_dau)
+        context = tao_context_trang_chu(
+            phien,
+            ngay_bat_dau,
+            loi=ket_qua.thong_bao,
+            thieu_nhu_cau=ket_qua.thieu_nhu_cau,
+        )
         return giao_dien.TemplateResponse(
             "index.html",
-            {
-                "request": request,
-                "loi": ket_qua.thong_bao,
-                "thieu_nhu_cau": ket_qua.thieu_nhu_cau,
-                "lich": lay_lich_hien_thi(phien, None),
-                "la_lich_nhap": False,
-                "ds_lich_tuan": danh_sach_lich_tuan(phien),
-                "danh_sach_ca_nhom": danh_sach_ca_theo_nhom(),
-                "ca_theo_ten": tao_ca_theo_ten(phien),
-                "ten_thu": ten_thu,
-                "ten_nhom_hien_thi": ten_nhom_hien_thi,
-                "ngay_mac_dinh": ngay_bat_dau,
-                "ds_nhan_vien": phien.query(models.NhanVien).order_by(models.NhanVien.ten_nv).all(),
-                "ngay_list_nghi": ngay_list_nghi,
-                "ngay_nghi_theo_ngay": ngay_nghi_theo_ngay,
-            },
+            {"request": request, **context},
         )
     return RedirectResponse(url=f"/?lich_tuan_id={ket_qua.lich_tuan_id}", status_code=303)
 
@@ -1208,10 +1451,15 @@ def ngay_nghi(request: Request, phien: Session = Depends(lay_phien_lam_viec)):
 @ung_dung.post("/ngay-nghi")
 async def tao_ngay_nghi(request: Request, phien: Session = Depends(lay_phien_lam_viec)):
     form = await request.form()
+    try:
+        nhan_vien_id = _parse_int_required(form.get("nhan_vien_id"), "nhan_vien_id")
+        ngay = _parse_date_required(form.get("ngay"), "ngay")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     crud.tao_ngay_nghi(
         phien,
-        nhan_vien_id=int(form.get("nhan_vien_id")),
-        ngay=datetime.fromisoformat(form.get("ngay")).date(),
+        nhan_vien_id=nhan_vien_id,
+        ngay=ngay,
         trang_thai=form.get("trang_thai") or "OFF",
         ghi_chu=form.get("ghi_chu") or None,
     )
@@ -1232,50 +1480,33 @@ async def tao_ngay_nghi_nhieu(request: Request, phien: Session = Depends(lay_phi
         try:
             ngay_hop_le.append(datetime.fromisoformat(raw).date())
         except ValueError:
-            du_lieu_lich = lay_lich_hien_thi(phien, None)
             ngay_mac_dinh = lay_thu_hai_tiep_theo()
-            ngay_list_nghi, ngay_nghi_theo_ngay = tai_du_lieu_ngay_nghi(phien, ngay_mac_dinh)
+            context = tao_context_trang_chu(
+                phien,
+                ngay_mac_dinh,
+                loi_ngay_nghi=f"Ngày nghỉ không hợp lệ: {raw}.",
+            )
             return giao_dien.TemplateResponse(
                 "index.html",
-                {
-                    "request": request,
-                    "lich": du_lieu_lich,
-                    "ds_lich_tuan": danh_sach_lich_tuan(phien),
-                    "danh_sach_ca_nhom": danh_sach_ca_theo_nhom(),
-                    "ca_theo_ten": tao_ca_theo_ten(phien),
-                    "ten_thu": ten_thu,
-                    "ten_nhom_hien_thi": ten_nhom_hien_thi,
-                    "ngay_mac_dinh": ngay_mac_dinh,
-                    "ds_nhan_vien": phien.query(models.NhanVien).order_by(models.NhanVien.ten_nv).all(),
-                    "ngay_list_nghi": ngay_list_nghi,
-                    "ngay_nghi_theo_ngay": ngay_nghi_theo_ngay,
-                    "loi_ngay_nghi": f"Ngày nghỉ không hợp lệ: {raw}.",
-                },
+                {"request": request, **context},
             )
     if not ngay_hop_le:
-        du_lieu_lich = lay_lich_hien_thi(phien, None)
         ngay_mac_dinh = lay_thu_hai_tiep_theo()
-        ngay_list_nghi, ngay_nghi_theo_ngay = tai_du_lieu_ngay_nghi(phien, ngay_mac_dinh)
+        context = tao_context_trang_chu(
+            phien,
+            ngay_mac_dinh,
+            loi_ngay_nghi="Chưa chọn ngày nghỉ.",
+        )
         return giao_dien.TemplateResponse(
             "index.html",
-            {
-                "request": request,
-                "lich": du_lieu_lich,
-                "ds_lich_tuan": danh_sach_lich_tuan(phien),
-                "danh_sach_ca_nhom": danh_sach_ca_theo_nhom(),
-                "ca_theo_ten": tao_ca_theo_ten(phien),
-                "ten_thu": ten_thu,
-                "ten_nhom_hien_thi": ten_nhom_hien_thi,
-                "ngay_mac_dinh": ngay_mac_dinh,
-                "ds_nhan_vien": phien.query(models.NhanVien).order_by(models.NhanVien.ten_nv).all(),
-                "ngay_list_nghi": ngay_list_nghi,
-                "ngay_nghi_theo_ngay": ngay_nghi_theo_ngay,
-                "loi_ngay_nghi": "Chưa chọn ngày nghỉ.",
-            },
+            {"request": request, **context},
         )
 
     ngay_set = sorted(set(ngay_hop_le))
-    nv_id = int(nhan_vien_id)
+    try:
+        nv_id = _parse_int_required(nhan_vien_id, "nhan_vien_id")
+    except ValueError:
+        return RedirectResponse(url="/", status_code=303)
     for ngay in ngay_set:
         ton_tai = (
             phien.query(models.NgayNghi)
@@ -1306,9 +1537,12 @@ def xoa_ngay_nghi(
 
 @ung_dung.post("/ngay-nghi/xoa-tat-ca")
 def xoa_ngay_nghi_tat_ca(
+    request: Request,
     redirect_to: str | None = Form(None),
+    admin_token: str | None = Form(None),
     phien: Session = Depends(lay_phien_lam_viec),
 ):
+    kiem_tra_admin_token(request, admin_token)
     phien.query(models.NgayNghi).delete()
     phien.commit()
     return RedirectResponse(url=redirect_to or "/ngay-nghi", status_code=303)
@@ -1335,17 +1569,26 @@ def nhu_cau_ca(request: Request, phien: Session = Depends(lay_phien_lam_viec)):
 @ung_dung.post("/nhu-cau-ca")
 async def tao_nhu_cau_ca(request: Request, phien: Session = Depends(lay_phien_lam_viec)):
     form = await request.form()
-    chi_nhanh_id = form.get("chi_nhanh_id")
-    vai_tro_id = form.get("vai_tro_yeu_cau_id")
+    try:
+        chi_nhanh_id = _parse_int_or_none(form.get("chi_nhanh_id"), "chi_nhanh_id")
+        vai_tro_id = _parse_int_or_none(form.get("vai_tro_yeu_cau_id"), "vai_tro_yeu_cau_id")
+        ca_id = _parse_int_required(form.get("ca_id"), "ca_id")
+        so_nguoi_can = _parse_int_required(form.get("so_nguoi_can"), "so_nguoi_can")
+        do_quan_trong = _parse_int_or_none(form.get("do_quan_trong"), "do_quan_trong")
+        senior_toi_thieu = _parse_int_or_none(form.get("senior_toi_thieu"), "senior_toi_thieu")
+        ngay = _parse_date_required(form.get("ngay"), "ngay")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     crud.tao_nhu_cau_ca(
         phien,
-        ngay=datetime.fromisoformat(form.get("ngay")).date(),
-        chi_nhanh_id=int(chi_nhanh_id) if chi_nhanh_id else None,
-        ca_id=int(form.get("ca_id")),
-        so_nguoi_can=int(form.get("so_nguoi_can")),
-        vai_tro_yeu_cau_id=int(vai_tro_id) if vai_tro_id else None,
-        do_quan_trong=int(form.get("do_quan_trong")) if form.get("do_quan_trong") else None,
-        senior_toi_thieu=int(form.get("senior_toi_thieu")) if form.get("senior_toi_thieu") else None,
+        ngay=ngay,
+        chi_nhanh_id=chi_nhanh_id,
+        ca_id=ca_id,
+        so_nguoi_can=so_nguoi_can,
+        vai_tro_yeu_cau_id=vai_tro_id,
+        do_quan_trong=do_quan_trong,
+        senior_toi_thieu=senior_toi_thieu,
     )
     return RedirectResponse(url="/nhu-cau-ca", status_code=303)
 
@@ -1375,10 +1618,14 @@ def trong_so(request: Request, phien: Session = Depends(lay_phien_lam_viec)):
 @ung_dung.post("/trong-so")
 async def cap_nhat_trong_so(request: Request, phien: Session = Depends(lay_phien_lam_viec)):
     form = await request.form()
+    try:
+        gia_tri = _parse_int_required(form.get("gia_tri"), "gia_tri")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     crud.tao_hoac_cap_nhat_trong_so(
         phien,
         khoa=form.get("khoa"),
-        gia_tri=int(form.get("gia_tri")),
+        gia_tri=gia_tri,
     )
     return RedirectResponse(url="/trong-so", status_code=303)
 

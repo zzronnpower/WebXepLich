@@ -73,6 +73,31 @@ body.theme-light-green {
   --mau-chu-thu-bang-lich: #3f5a4f;
 }
 
+html[data-theme="aster"],
+body.theme-aster {
+  --nen: #111214;
+  --vien: rgba(255, 255, 255, 0.1);
+  --the: rgba(20, 23, 28, 0.9);
+  --chu: #e6e9ee;
+  --nhan: #9da6b2;
+  --chinh: #d8b97a;
+  --chinh-2: #79cdb9;
+  --nen-grad-1: #15171b;
+  --nen-grad-2: #101215;
+  --nen-grad-3: #0c0e12;
+  --nen-hieu-ung-1: rgba(216, 185, 122, 0.16);
+  --nen-hieu-ung-2: rgba(121, 205, 185, 0.11);
+  --nen-hieu-ung-3: rgba(104, 132, 176, 0.12);
+  --nav-bg: rgba(13, 15, 20, 0.86);
+  --o-nhap: rgba(255, 255, 255, 0.05);
+  --option-bg: #1c2028;
+  --option-chu: #e6e9ee;
+  --dock-bg: rgba(20, 23, 28, 0.95);
+  --dock-shadow: rgba(0, 0, 0, 0.38);
+  --mau-tieu-de-bang-lich: #e6e9ee;
+  --mau-chu-thu-bang-lich: #e6e9ee;
+}
+
 * {
   box-sizing: border-box;
 }

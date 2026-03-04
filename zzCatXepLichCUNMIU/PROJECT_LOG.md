@@ -486,3 +486,92 @@ This will wipe existing data and re-seed the updated dataset.
 - Operational output for current handover:
   - Generated full database dump artifact at `backups/lich_dump_v1.1_20260225_121102.sql.gz`.
   - SHA256: `00ddbc4b56ad13302bddadb99c4a44902bb5fe649a258993d210d9c216c56a11`.
+
+## Latest Update (2026-02-25, phase-1 optimization hardening)
+
+- Implemented phase-1 reliability/performance fixes similar to Boktoshi optimization style:
+  - Solver performance + correctness:
+    - Precomputed employee branch/role sets before variable generation to avoid rebuilding sets repeatedly in nested loops.
+    - Fixed late-shift penalty factor bug by binding employee weight map inside the corresponding employee loop (avoids cross-employee leakage).
+  - DB connection resilience:
+    - Enabled SQLAlchemy `pool_pre_ping`, `pool_recycle`, and explicit pool sizing in `backend/app/db.py` to reduce stale connection failures.
+  - Input validation hardening:
+    - Added central parsers for required/optional integer + date fields in `backend/app/main.py`.
+    - Hardened key form endpoints (`/ngay-nghi`, `/ngay-nghi/nhieu`, `/nhu-cau-ca`, `/trong-so`) so malformed payload now returns controlled `400` instead of unhandled server errors.
+  - Runtime hardening:
+    - Docker image default command no longer runs with `--reload`.
+    - Added healthchecks for both `web` and `db` services in `docker-compose.yml`, and made `web` wait for healthy DB.
+
+## Latest Update (2026-02-25, dependency reproducibility)
+
+- Pinned runtime dependencies in `requirements.txt` to tested versions from current successful container build.
+- Goal: reduce drift between machines/containers and keep behavior stable across redeploys.
+
+## Latest Update (2026-02-25, phase-2 service refactor + data integrity)
+
+- Continued phase-2 optimization with maintainability/data-quality focus:
+  - Introduced service layer module `backend/app/services/schedule_service.py`:
+    - Centralized Monday normalization for schedule runs.
+    - Centralized draft-status marking (`NHAP_DA_XEP` / `NHAP_TU_XEP`) after successful run.
+    - `/xep-lich` and `/tu-xep-lich` now call service functions instead of duplicating orchestration logic.
+  - Reduced duplicated controller/template context code:
+    - Added reusable `tao_context_trang_chu(...)` in `main.py`.
+    - Reused it in schedule error rendering and multi-leave validation rendering paths.
+  - Added startup performance indexes (idempotent `CREATE INDEX IF NOT EXISTS`):
+    - `ngay_nghi(ngay)`, `ngay_nghi(nhan_vien_id, ngay)`
+    - `nhu_cau_ca(ngay)`, `nhu_cau_ca(ngay, chi_nhanh_id, ca_id)`
+    - `lich_chi_tiet(lich_tuan_id, ngay)`, `lich_chi_tiet(nhan_vien_id, ngay)`
+    - `lich_tuan(trang_thai)`
+  - Hardened CRUD idempotency to prevent duplicate business rows:
+    - `tao_ngay_nghi(...)` now upserts by `(nhan_vien_id, ngay)`.
+    - `tao_nhu_cau_ca(...)` now upserts by `(ngay, chi_nhanh_id, ca_id, vai_tro_yeu_cau_id)`.
+
+## Latest Update (2026-02-25, phase-3 runtime hardening + observability)
+
+- Added request-id and structured request logging middleware:
+  - Every request now includes correlation id (`X-Request-ID` in response).
+  - Logs include method/path/status/duration for faster incident tracing.
+  - Aggregates in-memory HTTP metrics (`count/errors/avg_ms/max_ms`).
+- Added operational endpoints:
+  - `GET /healthz` for liveness checks.
+  - `GET /metrics` exposing summarized HTTP metrics + solver runtime metrics.
+- Added solver observability in service layer:
+  - Logs per-run duration and success/failure for both `xep_lich` and `tu_xep_lich`.
+  - Publishes aggregate solver stats for metrics endpoint.
+- Added destructive-action guard support:
+  - `POST /ngay-nghi/xoa-tat-ca` now supports `ADMIN_TOKEN` protection (header/query/form).
+  - Guard activates only when `ADMIN_TOKEN` env is configured.
+- Updated README operations guide with:
+  - production endpoints (`/healthz`, `/metrics`),
+  - `ADMIN_TOKEN` behavior,
+  - periodic backup/restore checklist.
+
+## Latest Update (2026-02-25, phase-4 production maturity)
+
+- Extended runtime hardening to production-oriented operations:
+  - Added readiness endpoint `GET /readyz` with DB probe (`SELECT 1`) for deployment gating.
+  - Added Prometheus-style exporter endpoint `GET /metrics/prometheus`.
+- Added asynchronous schedule job workflow:
+  - `POST /api/jobs/xep-lich` to enqueue background schedule generation (`xep_lich` / `tu_xep_lich`).
+  - `GET /api/jobs/{job_id}` to poll status/result (`queued/running/done/failed`, `lich_tuan_id`).
+  - Backed by new service module `backend/app/services/job_service.py`.
+- Strengthened sensitive-route protection pattern:
+  - Middleware now enforces `ADMIN_TOKEN` for all `POST` routes containing `/xoa` (when env token configured).
+  - This generalizes protection beyond a single destructive endpoint.
+- Added operational backup utility:
+  - New script `scripts/ops_backup_verify.sh` performs dump + gzip + archive verification + SHA256 output.
+  - README updated with usage and phase-4 operation notes.
+
+## Latest Update (2026-03-04, theme Aster rollout)
+
+- Extended global theme selector to include `Aster` option in scheduler app:
+  - Updated `backend/app/static/theme.js`:
+    - theme list now supports: `default`, `aster`, `pinky`, `light-green`.
+    - selector order now shows `Aster` immediately after `Default`.
+- Added `Aster` palette tokens in `backend/app/static/style.css`:
+  - dark ASTER-like background/foreground colors,
+  - navigation/card/input/dock colors,
+  - schedule title/day header readable colors (`--mau-tieu-de-bang-lich`, `--mau-chu-thu-bang-lich`).
+- Behavior note:
+  - `Default` remains unchanged as startup fallback.
+  - `Aster` only applies after user selects it from theme dock (persisted via localStorage).

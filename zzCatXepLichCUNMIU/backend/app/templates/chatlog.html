@@ -326,6 +326,50 @@
         <div class="goi-y">Assistant</div>
         <p>Đã tạo dump toàn bộ DB để bàn giao (`backups/lich_dump_v1.1_20260225_121102.sql.gz`, kèm SHA256), đồng thời bổ sung script `scripts/windows_setup_and_restore.ps1` + wrapper `.bat` để máy Windows chỉ cần chạy một lệnh là dựng Docker và restore DB. README cũng được cập nhật flow deploy/restore chi tiết cho máy đích.</p>
       </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Mở dự án xếp lịch, review toàn bộ code và tối ưu để chạy mượt/ít lỗi theo style đã optimize ở Boktoshi.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã triển khai phase-1 optimize/hardening: sửa bug tính điểm solver ở ca muộn-sáng, tối ưu loop tạo biến bằng map precompute role/branch theo nhân viên, thêm parser validate input để tránh 500 cho form sai định dạng, gia cố pool kết nối DB (`pool_pre_ping` + recycle + pool sizing), và bổ sung healthcheck docker web/db cùng dependency healthy trước khi web boot.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Bổ sung thêm: đã pin version các package trong `requirements.txt` theo bản build đã chạy ổn định, giúp deploy/rebuild ở máy khác ít bị lệch hành vi do dependency tự nâng version.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu triển khai tiếp phase 2 để tăng maintainability, data integrity và hiệu năng khi dữ liệu lớn.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã triển khai phase 2: tách orchestration xếp lịch sang service (`schedule_service`), gom context render lỗi trang chủ để giảm duplicate trong controller, bổ sung index hiệu năng khởi tạo idempotent lúc startup, và nâng CRUD sang cơ chế upsert cho `ngay_nghi` + `nhu_cau_ca` để tránh duplicate dữ liệu nghiệp vụ.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu triển khai phase 3 để tăng độ an toàn vận hành production và khả năng theo dõi hiệu năng.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã triển khai phase 3: thêm middleware request-id + structured log theo request, thêm endpoint `/healthz` và `/metrics` (gồm cả stats solver), thêm cơ chế guard `ADMIN_TOKEN` cho endpoint xóa toàn bộ ngày nghỉ, và cập nhật README với checklist backup/restore vận hành định kỳ.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Yêu cầu triển khai phase 4 luôn để tăng mức production maturity.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã triển khai phase 4: thêm `/readyz` + `/metrics/prometheus`, bổ sung job nền cho solver qua `/api/jobs/xep-lich` và `/api/jobs/{job_id}`, mở rộng guard `ADMIN_TOKEN` ở middleware cho mọi route POST chứa `/xoa`, và thêm script vận hành `scripts/ops_backup_verify.sh` để dump + verify + checksum backup.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Áp dụng theme Aster cho dự án Xếp Lịch để đồng bộ với Boktoshi.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã áp dụng xong: thêm `Aster` vào theme selector toàn hệ thống (`theme.js`) và bổ sung bộ token `html[data-theme="aster"]` trong `style.css`. Mặc định vẫn giữ `Default`; chỉ đổi sang Aster khi người dùng chọn trong theme dock.</p>
+      </div>
     </div>
   </section>
 {% endblock %}

@@ -267,6 +267,7 @@ Ví dụ flow nút “Xếp lịch”:
 - Với lane ca có tối đa 2 người, UI nên hiển thị 2 card nằm ngang (chia đôi bề ngang); khi chỉ còn 1 card sau thao tác kéo thì card còn lại tự động giãn full-width ngay không cần lưu.
 - Với nhóm có lane ca (326/197/796/CN), chỉ cho phép drop vào đúng `ca-lane`; không cho thả vào vùng trống của cả ô ngày để tránh phát sinh "dòng ảo" vượt số ca.
 - Với bộ chọn theme dạng dock, dùng `fixed` chỉ khi user muốn dock nổi; nếu user muốn chỉ thấy ở cuối trang thì chuyển về in-flow (`static`) và đặt ở footer area.
+- Theme system chuẩn hiện có 4 lựa chọn: `Default`, `Aster`, `Pinky`, `Light Green`; mặc định luôn là `Default` nếu chưa có lựa chọn lưu trong localStorage.
 - Với ô `Ngày bắt đầu (thứ Hai)` trên trang chủ, mặc định nên là **thứ Hai tiếp theo** so với ngày hiện tại (strict next Monday), trừ khi user truyền ngày rõ ràng hoặc đang mở lịch theo `lich_tuan_id`.
 - Nếu user báo "đã sửa nhưng giao diện chưa đổi", ưu tiên xác nhận lại bằng `docker compose up -d --build` và yêu cầu hard refresh để loại trừ cache/container cũ.
 - Với rule nhân viên không thuộc chi nhánh cấu hình, chế độ kéo-thả có thể cho phép lưu để vận hành linh hoạt; khi đó phải trả cảnh báo/vi phạm rõ ràng sau khi lưu để người dùng nhận biết và tự quyết định xử lý.
@@ -289,3 +290,17 @@ Ví dụ flow nút “Xếp lịch”:
 - Guard xác nhận rời trang lịch nháp phải bỏ qua các click không phải điều hướng thực (link `download`, `data:`, `blob:`, `_blank`) để không chặn luồng tải ảnh/screenshot sau khi bấm lưu.
 - Khi bàn giao sang máy Windows khác, ưu tiên cung cấp script PowerShell all-in-one (docker up + restore dump) để user không phụ thuộc OpenCode/VS tooling ở máy nguồn.
 - Dump DB bàn giao nên dùng `pg_dump --clean --if-exists` và đóng gói `.sql.gz` để restore nhanh và giảm rủi ro lệch schema/data giữa hai máy.
+- Với endpoint nhận form ngày/số (`ngay_nghi`, `nhu_cau_ca`, `trong_so`), luôn parse qua helper chuẩn và trả lỗi 4xx có thông điệp rõ ràng; không để lỗi `ValueError` rơi ra thành 500.
+- Với solver có vòng lặp lồng nhiều tầng (NV x nhu cầu), ưu tiên precompute map (`chi_nhanh_theo_nv`, `vai_tro_theo_nv`, weight map) để giảm chi phí lặp và tránh bug do dùng biến ngoài scope nhân viên.
+- Compose runtime cần có `healthcheck` cho cả web/db; web chỉ khởi động phụ thuộc khi db đã healthy để giảm lỗi boot race.
+- `requirements.txt` cần pin version cho dependency runtime chính; tránh để package trôi version theo thời gian làm thay đổi hành vi khi build lại.
+- Luồng xếp lịch (`/xep-lich`, `/tu-xep-lich`) nên gọi qua service module trung gian để gom logic chuẩn hóa tuần + chuyển trạng thái nháp, tránh duplicate orchestration trong controller.
+- Với dữ liệu nghiệp vụ dễ bị nhập lặp (ngày nghỉ, nhu cầu ca), CRUD nên ưu tiên idempotent upsert theo key nghiệp vụ thay vì luôn insert mới.
+- Các truy vấn theo tuần/lịch nên được hỗ trợ bằng index khởi tạo idempotent lúc startup (CREATE INDEX IF NOT EXISTS) để giữ tốc độ ổn định khi data tăng.
+- Runtime nên có middleware request-id + structured log (method/path/status/duration) để truy vết sự cố nhanh; trả `X-Request-ID` trong response.
+- Cần có endpoint vận hành chuẩn cho prod: `GET /healthz` (liveness) và `GET /metrics` (HTTP + solver stats) để giám sát hiệu năng theo thời gian.
+- Endpoint hủy dữ liệu hàng loạt phải hỗ trợ guard token theo env (`ADMIN_TOKEN`) để tránh thao tác nhầm ở môi trường production.
+- Route vận hành nhạy cảm có thể chuẩn hóa theo pattern middleware: nếu `ADMIN_TOKEN` được cấu hình thì mọi `POST` chứa `/xoa` phải có token hợp lệ qua header/query.
+- Nên hỗ trợ kênh chạy nền cho solver (`/api/jobs/xep-lich` + polling `/api/jobs/{job_id}`) để tránh block request dài khi xếp lịch tuần lớn.
+- Với metric nội bộ, nên duy trì cả JSON (`/metrics`) lẫn text Prometheus (`/metrics/prometheus`) để dễ tích hợp dashboard/alert.
+- Cần có script backup chuẩn hóa có bước verify (`gzip -t`, checksum) để giảm rủi ro backup hỏng khi phục hồi.

@@ -130,6 +130,19 @@ def tao_ngay_nghi(
     ghi_chu: str | None,
     nguon: str = "user",
 ):
+    ton_tai = (
+        phien.query(models.NgayNghi)
+        .filter(models.NgayNghi.nhan_vien_id == nhan_vien_id)
+        .filter(models.NgayNghi.ngay == ngay)
+        .first()
+    )
+    if ton_tai:
+        ton_tai.trang_thai = trang_thai
+        ton_tai.nguon = nguon
+        ton_tai.ghi_chu = ghi_chu
+        phien.commit()
+        return ton_tai
+
     ngay_nghi = models.NgayNghi(
         nhan_vien_id=nhan_vien_id,
         ngay=ngay,
@@ -152,6 +165,21 @@ def tao_nhu_cau_ca(
     do_quan_trong: int | None,
     senior_toi_thieu: int | None,
 ):
+    ton_tai = (
+        phien.query(models.NhuCauCa)
+        .filter(models.NhuCauCa.ngay == ngay)
+        .filter(models.NhuCauCa.chi_nhanh_id == chi_nhanh_id)
+        .filter(models.NhuCauCa.ca_id == ca_id)
+        .filter(models.NhuCauCa.vai_tro_yeu_cau_id == vai_tro_yeu_cau_id)
+        .first()
+    )
+    if ton_tai:
+        ton_tai.so_nguoi_can = so_nguoi_can
+        ton_tai.do_quan_trong = do_quan_trong
+        ton_tai.senior_toi_thieu = senior_toi_thieu
+        phien.commit()
+        return ton_tai
+
     nhu_cau = models.NhuCauCa(
         ngay=ngay,
         chi_nhanh_id=chi_nhanh_id,
