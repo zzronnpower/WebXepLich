@@ -370,6 +370,22 @@
         <div class="goi-y">Assistant</div>
         <p>Đã áp dụng xong: thêm `Aster` vào theme selector toàn hệ thống (`theme.js`) và bổ sung bộ token `html[data-theme="aster"]` trong `style.css`. Mặc định vẫn giữ `Default`; chỉ đổi sang Aster khi người dùng chọn trong theme dock.</p>
       </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Mở project xếp lịch, tôi muốn bỏ chi nhánh 796ADV do không còn hoạt động; cần xóa hẳn khỏi hệ thống và khi update trên laptop khác thì dữ liệu cũ của 796 phải chuyển sang CHUA_XEP.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã gỡ `796ADV` khỏi runtime + seed, đồng thời thêm migration idempotent chạy lúc startup để xử lý DB cũ an toàn: toàn bộ bản ghi lịch còn dính `796`/`796ADV` sẽ được chuyển sang `CHUA_XEP` và reset `chi_nhanh_id/ca_id`, sau đó dọn `nhu_cau_ca`, `mapping_nhom`, liên kết nhân viên-chi nhánh và xóa luôn branch/group 796 khỏi cơ sở dữ liệu. Nhờ đó khi pull code mới ở laptop khác, restart app là hệ thống tự sạch 796 mà vẫn bảo toàn lịch sử.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Vì sao UI vẫn còn 796ADV ở dashboard và các màn quản lý nhân viên/nhu cầu ca; cần xử lý dứt điểm trên máy hiện tại trước khi push sang máy khác.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã xử lý dứt điểm trên máy hiện tại: chạy migration SQL `scripts/sql/remove_796adv.sql` để dọn sạch dữ liệu 796 trong DB, rebuild web để nạp code mới, và verify các trang `/`, `/quan-ly`, `/nhan-vien`, `/nhu-cau-ca` đều trả 200 và không còn `796ADV`. Đồng thời fix tương thích `TemplateResponse` theo signature mới của Starlette bằng helper `tra_template(...)` để tránh lỗi 500 toàn trang sau rebuild.</p>
+      </div>
     </div>
   </section>
 {% endblock %}

@@ -38,6 +38,13 @@ _http_metric_lock = threading.Lock()
 _http_metric: dict[str, dict[str, float | int]] = {}
 
 
+def tra_template(ten_template: str, context: dict, **kwargs):
+    request = context.get("request")
+    if request is None:
+        raise ValueError("Template context thieu request")
+    return giao_dien.TemplateResponse(request=request, name=ten_template, context=context, **kwargs)
+
+
 def _khoi_tao_logging() -> None:
     if logging.getLogger().handlers:
         return
@@ -133,6 +140,7 @@ def khoi_tao():
                 tao_du_lieu_mau(phien)
                 cap_nhat_nhom_off(phien)
                 dam_bao_nhom_he_thong(phien)
+                dam_bao_xoa_796adv(phien)
                 dam_bao_cot_thu_tu(phien)
                 dam_bao_cot_ngay_nghi_nguon(phien)
                 dam_bao_cot_ten_lich(phien)
@@ -147,6 +155,7 @@ def khoi_tao():
         tao_du_lieu_mau(phien)
         cap_nhat_nhom_off(phien)
         dam_bao_nhom_he_thong(phien)
+        dam_bao_xoa_796adv(phien)
         dam_bao_cot_thu_tu(phien)
         dam_bao_cot_ngay_nghi_nguon(phien)
         dam_bao_cot_ten_lich(phien)
@@ -158,11 +167,10 @@ def khoi_tao():
 THU_TU_NHOM_MAC_DINH = {
     "326TTV": 1,
     "197LT5": 2,
-    "796ADV": 3,
-    "CN": 4,
-    "PHU_SPA": 5,
-    "OFF": 6,
-    "CHUA_XEP": 7,
+    "CN": 3,
+    "PHU_SPA": 4,
+    "OFF": 5,
+    "CHUA_XEP": 6,
 }
 
 
@@ -271,7 +279,6 @@ def danh_sach_ca_theo_nhom() -> dict[str, list[str]]:
     return {
         "326TTV": ["8h-19h", "8h30-19h30", "9h-20h", "10h-21h"],
         "197LT5": ["8h-19h", "9h-20h", "10h-21h"],
-        "796ADV": ["9h-20h"],
         "CN": ["9h-20h"],
         "PHU_SPA": ["8h30-19h30"],
         "OFF": ["Nghỉ"],
@@ -358,6 +365,72 @@ def dam_bao_nhom_he_thong(phien: Session):
         can_commit = True
     if can_commit:
         phien.commit()
+
+
+def dam_bao_xoa_796adv(phien: Session):
+    try:
+        nhom_chua_xep = phien.query(models.NhomHienThi).filter(models.NhomHienThi.ten_nhom == "CHUA_XEP").first()
+        if not nhom_chua_xep:
+            nhom_chua_xep = models.NhomHienThi(ten_nhom="CHUA_XEP", mau_nen="#f4f4f4")
+            phien.add(nhom_chua_xep)
+            phien.flush()
+
+        nhom_796 = phien.query(models.NhomHienThi).filter(models.NhomHienThi.ten_nhom == "796ADV").first()
+        ds_chi_nhanh_796 = (
+            phien.query(models.ChiNhanh)
+            .filter(or_(models.ChiNhanh.ma_chi_nhanh == "796", models.ChiNhanh.ten_chi_nhanh == "796ADV"))
+            .all()
+        )
+
+        ds_cn_796_id = [cn.id for cn in ds_chi_nhanh_796]
+        nhom_796_id = nhom_796.id if nhom_796 else None
+        if not ds_cn_796_id and not nhom_796_id:
+            return
+
+        ds_dieu_kien = []
+        if ds_cn_796_id:
+            ds_dieu_kien.append(models.LichChiTiet.chi_nhanh_id.in_(ds_cn_796_id))
+            phien.query(models.NhuCauCa).filter(models.NhuCauCa.chi_nhanh_id.in_(ds_cn_796_id)).delete(
+                synchronize_session=False
+            )
+            phien.query(models.MappingNhom).filter(models.MappingNhom.chi_nhanh_id.in_(ds_cn_796_id)).delete(
+                synchronize_session=False
+            )
+            ds_nv_co_796 = (
+                phien.query(models.NhanVien)
+                .filter(models.NhanVien.chi_nhanh.any(models.ChiNhanh.id.in_(ds_cn_796_id)))
+                .all()
+            )
+            for nv in ds_nv_co_796:
+                nv.chi_nhanh = [cn for cn in nv.chi_nhanh if cn.id not in ds_cn_796_id]
+        if nhom_796_id:
+            ds_dieu_kien.append(models.LichChiTiet.nhom_hien_thi_id == nhom_796_id)
+            phien.query(models.MappingNhom).filter(models.MappingNhom.nhom_hien_thi_id == nhom_796_id).delete(
+                synchronize_session=False
+            )
+
+        phien.query(models.LichChiTiet).filter(or_(*ds_dieu_kien)).update(
+            {
+                models.LichChiTiet.nhom_hien_thi_id: nhom_chua_xep.id,
+                models.LichChiTiet.chi_nhanh_id: None,
+                models.LichChiTiet.ca_id: None,
+            },
+            synchronize_session=False,
+        )
+
+        for cn in ds_chi_nhanh_796:
+            phien.delete(cn)
+        if nhom_796:
+            phien.delete(nhom_796)
+        phien.commit()
+        logger.info(
+            "remove_796adv_migration done converted_rows_to_chua_xep=1 removed_branches=%s removed_group=%s",
+            len(ds_chi_nhanh_796),
+            bool(nhom_796_id),
+        )
+    except Exception:
+        phien.rollback()
+        logger.exception("remove_796adv_migration failed")
 
 
 def dam_bao_cot_thu_tu(phien: Session):
@@ -710,7 +783,7 @@ def trang_chu(
         ngay_mac_dinh = lay_thu_hai_tiep_theo()
     ds_nhan_vien = phien.query(models.NhanVien).order_by(models.NhanVien.ten_nv).all()
     ngay_list_nghi, ngay_nghi_theo_ngay = tai_du_lieu_ngay_nghi(phien, ngay_mac_dinh)
-    return giao_dien.TemplateResponse(
+    return tra_template(
         "index.html",
         {
             "request": request,
@@ -731,7 +804,7 @@ def trang_chu(
 
 @ung_dung.get("/lich-da-xep")
 def lich_da_xep(request: Request, phien: Session = Depends(lay_phien_lam_viec)):
-    return giao_dien.TemplateResponse(
+    return tra_template(
         "lich_da_xep.html",
         {
             "request": request,
@@ -782,7 +855,7 @@ def xoa_lich_da_xep(lich_tuan_id: int, phien: Session = Depends(lay_phien_lam_vi
 
 @ung_dung.get("/chatlog")
 def chatlog(request: Request):
-    return giao_dien.TemplateResponse("chatlog.html", {"request": request})
+    return tra_template("chatlog.html", {"request": request})
 
 
 @ung_dung.get("/healthz")
@@ -877,7 +950,7 @@ def kiem_tra(request: Request, lich_tuan_id: int | None = None, phien: Session =
     ket_qua = kiem_tra_lich(phien, lich_tuan_id)
     if not ket_qua:
         return RedirectResponse(url="/", status_code=303)
-    return giao_dien.TemplateResponse(
+    return tra_template(
         "kiem_tra.html",
         {
             "request": request,
@@ -1195,7 +1268,7 @@ async def huy_lich_nhap(request: Request, phien: Session = Depends(lay_phien_lam
 @ung_dung.get("/thu-nghiem")
 def thu_nghiem(request: Request, ngay_bat_dau: date | None = None, phien: Session = Depends(lay_phien_lam_viec)):
     if not ngay_bat_dau:
-        return giao_dien.TemplateResponse(
+        return tra_template(
             "thu_nghiem.html",
             {
                 "request": request,
@@ -1226,7 +1299,7 @@ def thu_nghiem(request: Request, ngay_bat_dau: date | None = None, phien: Sessio
             }
         )
 
-    return giao_dien.TemplateResponse(
+    return tra_template(
         "thu_nghiem.html",
         {
             "request": request,
@@ -1250,7 +1323,7 @@ def xep_lich(
             loi=ket_qua.thong_bao,
             thieu_nhu_cau=ket_qua.thieu_nhu_cau,
         )
-        return giao_dien.TemplateResponse(
+        return tra_template(
             "index.html",
             {"request": request, **context},
         )
@@ -1271,7 +1344,7 @@ def tu_xep_lich(
             loi=ket_qua.thong_bao,
             thieu_nhu_cau=ket_qua.thieu_nhu_cau,
         )
-        return giao_dien.TemplateResponse(
+        return tra_template(
             "index.html",
             {"request": request, **context},
         )
@@ -1345,7 +1418,7 @@ def nhan_vien(request: Request, q: str | None = None, phien: Session = Depends(l
     ds_ca = phien.query(models.CaLam).order_by(models.CaLam.id).all()
     ds_chi_nhanh = phien.query(models.ChiNhanh).order_by(models.ChiNhanh.id).all()
     ds_trong_so = phien.query(models.TrongSoUuTien).order_by(models.TrongSoUuTien.khoa).all()
-    return giao_dien.TemplateResponse(
+    return tra_template(
         "nhan_vien.html",
         {
             "request": request,
@@ -1364,7 +1437,7 @@ def quan_ly(request: Request, phien: Session = Depends(lay_phien_lam_viec)):
     ds_ca = phien.query(models.CaLam).order_by(models.CaLam.id).all()
     ds_chi_nhanh = phien.query(models.ChiNhanh).order_by(models.ChiNhanh.id).all()
     ds_trong_so = phien.query(models.TrongSoUuTien).order_by(models.TrongSoUuTien.khoa).all()
-    return giao_dien.TemplateResponse(
+    return tra_template(
         "quan_ly.html",
         {
             "request": request,
@@ -1438,7 +1511,7 @@ def xoa_nhan_vien(nhan_vien_id: int, phien: Session = Depends(lay_phien_lam_viec
 def ngay_nghi(request: Request, phien: Session = Depends(lay_phien_lam_viec)):
     ds_ngay_nghi = phien.query(models.NgayNghi).order_by(models.NgayNghi.ngay.desc()).all()
     ds_nhan_vien = phien.query(models.NhanVien).order_by(models.NhanVien.ten_nv).all()
-    return giao_dien.TemplateResponse(
+    return tra_template(
         "ngay_nghi.html",
         {
             "request": request,
@@ -1486,7 +1559,7 @@ async def tao_ngay_nghi_nhieu(request: Request, phien: Session = Depends(lay_phi
                 ngay_mac_dinh,
                 loi_ngay_nghi=f"Ngày nghỉ không hợp lệ: {raw}.",
             )
-            return giao_dien.TemplateResponse(
+            return tra_template(
                 "index.html",
                 {"request": request, **context},
             )
@@ -1497,7 +1570,7 @@ async def tao_ngay_nghi_nhieu(request: Request, phien: Session = Depends(lay_phi
             ngay_mac_dinh,
             loi_ngay_nghi="Chưa chọn ngày nghỉ.",
         )
-        return giao_dien.TemplateResponse(
+        return tra_template(
             "index.html",
             {"request": request, **context},
         )
@@ -1554,7 +1627,7 @@ def nhu_cau_ca(request: Request, phien: Session = Depends(lay_phien_lam_viec)):
     ds_chi_nhanh = phien.query(models.ChiNhanh).order_by(models.ChiNhanh.id).all()
     ds_ca = phien.query(models.CaLam).order_by(models.CaLam.id).all()
     ds_vai_tro = phien.query(models.VaiTro).order_by(models.VaiTro.id).all()
-    return giao_dien.TemplateResponse(
+    return tra_template(
         "nhu_cau_ca.html",
         {
             "request": request,
@@ -1605,7 +1678,7 @@ def xoa_nhu_cau_ca(nhu_cau_id: int, phien: Session = Depends(lay_phien_lam_viec)
 @ung_dung.get("/trong-so")
 def trong_so(request: Request, phien: Session = Depends(lay_phien_lam_viec)):
     ds_trong_so = phien.query(models.TrongSoUuTien).order_by(models.TrongSoUuTien.khoa).all()
-    return giao_dien.TemplateResponse(
+    return tra_template(
         "trong_so.html",
         {
             "request": request,

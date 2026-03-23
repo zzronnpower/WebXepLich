@@ -62,6 +62,32 @@
 - Added theme token overrides in `backend/app/static/style.css` and floating selector dock.
 - Wired theme script in `backend/app/templates/base.html` so all pages share the same theme selection.
 
+## Latest Update (2026-03-23, complete local cleanup + migration script + template compatibility fix)
+
+- Completed full local cleanup to ensure UI no longer shows `796ADV` on any management screen:
+  - Executed SQL migration against current DB and verified `chi_nhanh`, `nhom_hien_thi`, `nhu_cau_ca`, `mapping_nhom` no longer contain 796-related data.
+  - Confirmed homepage, `/quan-ly`, `/nhan-vien`, `/nhu-cau-ca` all load `200` and do not contain `796ADV` text.
+- Added reusable migration script for cross-machine rollout:
+  - New file `scripts/sql/remove_796adv.sql` to remove branch/group 796 and convert legacy schedule rows to `CHUA_XEP` (`chi_nhanh_id=NULL`, `ca_id=NULL`).
+  - Script is idempotent-safe for update flow after pulling code on another laptop.
+- Hardened runtime migration observability in `backend/app/main.py`:
+  - `dam_bao_xoa_796adv(...)` now logs success and logs exception stack traces on failure.
+- Fixed framework compatibility regression after rebuild:
+  - Starlette template API now expects `request` first; introduced helper `tra_template(...)` and switched all template renders to avoid global 500 errors.
+
+## Latest Update (2026-03-23, remove 796ADV and auto-migrate legacy data)
+
+- Decommissioned branch/group `796ADV` from runtime config and seed data:
+  - Removed `796ADV` from group order and group-shift definition in `backend/app/main.py`.
+  - Removed seed creation for branch `796` and group `796ADV` in `backend/app/seed.py`.
+- Added startup migration guard to keep existing deployments safe when pulling new code:
+  - New bootstrap step `dam_bao_xoa_796adv(...)` runs idempotently.
+  - Legacy schedule rows tied to `796`/`796ADV` are converted to `CHUA_XEP` with `chi_nhanh_id = NULL`, `ca_id = NULL` so old schedules open without showing `796ADV`.
+  - Cleans related data in `nhu_cau_ca`, `mapping_nhom`, and employee-branch links, then removes `chi_nhanh` `796` and group `796ADV`.
+- Result:
+  - After update/restart on any machine (including machines with old DB), system no longer exposes `796ADV`.
+  - Historical data is preserved but displayed under `CHUA_XEP` instead of removed branch/group identifiers.
+
 ## Latest Update (2026-02-23)
 
 - Added schedule editing and management enhancements:

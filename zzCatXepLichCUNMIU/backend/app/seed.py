@@ -28,7 +28,6 @@ def tao_du_lieu_mau(phien: Session):
     chi_nhanh = [
         models.ChiNhanh(ma_chi_nhanh="326", ten_chi_nhanh="326TTV"),
         models.ChiNhanh(ma_chi_nhanh="197", ten_chi_nhanh="197LT5"),
-        models.ChiNhanh(ma_chi_nhanh="796", ten_chi_nhanh="796ADV"),
     ]
     phien.add_all(chi_nhanh)
     phien.flush()
@@ -71,7 +70,6 @@ def tao_du_lieu_mau(phien: Session):
     nhom = [
         models.NhomHienThi(ten_nhom="326TTV", mau_nen="#d7f2ff"),
         models.NhomHienThi(ten_nhom="197LT5", mau_nen="#d9f7e6"),
-        models.NhomHienThi(ten_nhom="796ADV", mau_nen="#fff1c9"),
         models.NhomHienThi(ten_nhom="CN", mau_nen="#ffd8e6"),
         models.NhomHienThi(ten_nhom="PHU_SPA", mau_nen="#f2d7ff"),
         models.NhomHienThi(ten_nhom="OFF", mau_nen="#e6e6e6"),
@@ -85,11 +83,9 @@ def tao_du_lieu_mau(phien: Session):
 
     cn326 = next(cn for cn in chi_nhanh if cn.ma_chi_nhanh == "326")
     cn197 = next(cn for cn in chi_nhanh if cn.ma_chi_nhanh == "197")
-    cn796 = next(cn for cn in chi_nhanh if cn.ma_chi_nhanh == "796")
 
     nhan_vien[0].chi_nhanh = [cn326]
     nhan_vien[1].chi_nhanh = [cn197]
-    nhan_vien[10].chi_nhanh = [cn796]
 
     for ca in ca_lam:
         if ca.ten_ca in {"8h-19h", "8h30-19h30", "9h-20h", "10h-21h"}:
@@ -97,9 +93,7 @@ def tao_du_lieu_mau(phien: Session):
         if ca.ten_ca in {"8h-19h", "9h-20h", "10h-21h"}:
             map_nhom(cn197.id, ca.id, nhom[1])
         if ca.ten_ca in {"9h-20h"}:
-            map_nhom(cn796.id, ca.id, nhom[2])
-        if ca.ten_ca in {"9h-20h"}:
-            map_nhom(None, ca.id, nhom[3])
+            map_nhom(None, ca.id, nhom[2])
 
     thu_hai = lay_thu_hai_tuan_nay()
     for i in range(7):
@@ -134,17 +128,6 @@ def tao_du_lieu_mau(phien: Session):
                 do_quan_trong=3,
             )
         )
-        phien.add(
-            models.NhuCauCa(
-                ngay=ngay,
-                chi_nhanh_id=cn796.id,
-                ca_id=ca_9_20.id,
-                so_nguoi_can=1,
-                vai_tro_yeu_cau_id=None,
-                do_quan_trong=2,
-            )
-        )
-
     phien.add(models.TrongSoUuTien(khoa="uu_tien_ca_ua_thich", gia_tri=4))
     phien.add(models.TrongSoUuTien(khoa="phat_ca_tranh", gia_tri=6))
     phien.add(models.TrongSoUuTien(khoa="cong_bang_chich_ngoai", gia_tri=5))

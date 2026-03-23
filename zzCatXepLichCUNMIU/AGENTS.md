@@ -44,7 +44,7 @@ Chịu trách nhiệm chạy thuật toán xếp lịch tự động theo tuần
 - ngay_nghi:
   - ma_nv, ngay, trang_thai=OFF, ghi_chu
 - nhu_cau_ca (theo ngày, theo chi nhánh):
-  - ngay, chi_nhanh (TTV/197/796)
+  - ngay, chi_nhanh (TTV/197)
   - ca (8-19, 8_30-19_30, 9-20, 10-21...)
   - so_nguoi_can
   - vai_tro_yeu_cau (tùy chọn)
@@ -98,7 +98,7 @@ Kiểm tra dữ liệu đầu vào và kết quả đầu ra để:
 
 ### Kiểm tra đầu vào (trước khi xếp)
 - Thiếu dữ liệu bắt buộc (nhân viên thiếu gio_toi_da_tuan, thiếu vai_tro…)
-- Nhu cầu ca không hợp lệ với chi nhánh (ví dụ 796 chỉ có ca 9-20)
+- Nhu cầu ca không hợp lệ với chi nhánh (ví dụ 197 chỉ nhận các ca đã cấu hình)
 - Thiếu nhân sự để đáp ứng tổng nhu cầu (ước lượng nhanh)
 - Xung đột OFF
 
@@ -251,7 +251,7 @@ Ví dụ flow nút “Xếp lịch”:
 - Khu ghi chú điều phối tạm (như `SPA OFF`) phải tách biệt khỏi bảng chính, dùng textarea nhiều dòng và mặc định không lưu (không DB, không cache) trừ khi user yêu cầu rõ cơ chế persistence.
 - Khi user yêu cầu persistence cho `SPA OFF`, phải lưu theo từng `lich_tuan` và theo từng ngày trong tuần; khi mở lại lịch đã xếp phải prefill đúng ghi chú tương ứng từng ngày.
 - Với lịch `TU_XEP`, sau mỗi lần lưu kéo-thả phải chuẩn hóa `ca_id`/`chi_nhanh_id` theo `thu_tu` dòng và mapping nhóm; nếu không, kiểm tra ràng buộc sẽ báo thiếu ảo dù UI đã sắp đúng.
-- Khi lưu lịch, cần chuẩn hóa lại toàn bộ các dòng thuộc nhóm chi nhánh (không chỉ các card vừa kéo) để tránh tồn tại bản ghi cũ `ca_id`/`chi_nhanh_id` null gây báo thiếu ảo cho `796ADV` hoặc `Chích ngoài`.
+- Khi lưu lịch, cần chuẩn hóa lại toàn bộ các dòng thuộc nhóm chi nhánh (không chỉ các card vừa kéo) để tránh tồn tại bản ghi cũ `ca_id`/`chi_nhanh_id` null gây báo thiếu ảo cho các nhóm chi nhánh hoặc `Chích ngoài`.
 - Cụm nút thao tác lịch nên đặt thành toolbar tách riêng phía trên tiêu đề bảng để tránh dồn chỗ trong header và giữ vùng bảng dễ đọc.
 - Trang ChatLog ưu tiên hiển thị theo kiểu conversation (bubble User/Assistant, căn trái-phải rõ ràng), tránh layout card-grid gây khó theo dõi mạch hội thoại.
 - Với toolbar thao tác lịch, có thể dùng màu nhấn riêng (ví dụ nền hồng nhạt + chữ đậm) khi user yêu cầu tăng độ nổi bật; giữ nguyên id/nút để không ảnh hưởng JS.
@@ -265,7 +265,7 @@ Ví dụ flow nút “Xếp lịch”:
 - Để tránh lỗi "nhảy dòng/nhảy ca" khi kéo card ở ca đầu, bảng lịch chi nhánh phải kéo-thả theo lane ca (drop-zone riêng từng ca), không dùng một danh sách card chung cho cả ô ngày.
 - Payload lưu kéo-thả cho nhóm chi nhánh phải gửi rõ `ca_id` theo lane đích; `thu_tu` chỉ dùng để sắp vị trí trong lane và fallback tương thích dữ liệu cũ.
 - Với lane ca có tối đa 2 người, UI nên hiển thị 2 card nằm ngang (chia đôi bề ngang); khi chỉ còn 1 card sau thao tác kéo thì card còn lại tự động giãn full-width ngay không cần lưu.
-- Với nhóm có lane ca (326/197/796/CN), chỉ cho phép drop vào đúng `ca-lane`; không cho thả vào vùng trống của cả ô ngày để tránh phát sinh "dòng ảo" vượt số ca.
+- Với nhóm có lane ca (326/197/CN), chỉ cho phép drop vào đúng `ca-lane`; không cho thả vào vùng trống của cả ô ngày để tránh phát sinh "dòng ảo" vượt số ca.
 - Với bộ chọn theme dạng dock, dùng `fixed` chỉ khi user muốn dock nổi; nếu user muốn chỉ thấy ở cuối trang thì chuyển về in-flow (`static`) và đặt ở footer area.
 - Theme system chuẩn hiện có 4 lựa chọn: `Default`, `Aster`, `Pinky`, `Light Green`; mặc định luôn là `Default` nếu chưa có lựa chọn lưu trong localStorage.
 - Với ô `Ngày bắt đầu (thứ Hai)` trên trang chủ, mặc định nên là **thứ Hai tiếp theo** so với ngày hiện tại (strict next Monday), trừ khi user truyền ngày rõ ràng hoặc đang mở lịch theo `lich_tuan_id`.
@@ -304,3 +304,5 @@ Ví dụ flow nút “Xếp lịch”:
 - Nên hỗ trợ kênh chạy nền cho solver (`/api/jobs/xep-lich` + polling `/api/jobs/{job_id}`) để tránh block request dài khi xếp lịch tuần lớn.
 - Với metric nội bộ, nên duy trì cả JSON (`/metrics`) lẫn text Prometheus (`/metrics/prometheus`) để dễ tích hợp dashboard/alert.
 - Cần có script backup chuẩn hóa có bước verify (`gzip -t`, checksum) để giảm rủi ro backup hỏng khi phục hồi.
+- Khi ngừng vận hành một chi nhánh, cần có migration startup idempotent để dọn dữ liệu liên quan và chuyển lịch sử về nhóm an toàn (`CHUA_XEP`) thay vì xóa cứng làm mất lịch cũ.
+- Với stack FastAPI/Starlette mới, `Jinja2Templates.TemplateResponse` dùng signature có `request` là tham số đầu; cần bọc helper tương thích để tránh lỗi 500 hàng loạt ở tất cả trang render template.
