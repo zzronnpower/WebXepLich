@@ -402,6 +402,14 @@
         <div class="goi-y">Assistant</div>
         <p>Đã triển khai backfill tự động khi mở lịch: hệ thống đồng bộ nhân viên mới vào từng <code>lich_tuan</code> cũ theo đủ 7 ngày và luôn đưa vào nhóm <code>CHUA_XEP</code> (không gán ca/chi nhánh). Cơ chế idempotent theo key <code>(lich_tuan_id, ngay, nhan_vien_id)</code> nên mở lại nhiều lần không tạo bản ghi trùng.</p>
       </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Can script cap nhat code cho may Windows chay Docker de pull code moi ma khong anh huong DB local.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Da them bo script <code>scripts/windows_update_code.ps1</code> va <code>scripts/windows_update_code.bat</code>: tu dong <code>fetch/pull --ff-only</code>, build lai service web, giu nguyen DB volume (khong down -v, khong reset). Dong thoi cap nhat README voi huong dan cap nhat code an toan cho may Windows dich.</p>
+      </div>
     </div>
   </section>
 {% endblock %}

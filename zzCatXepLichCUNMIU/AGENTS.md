@@ -308,3 +308,4 @@ Ví dụ flow nút “Xếp lịch”:
 - Với stack FastAPI/Starlette mới, `Jinja2Templates.TemplateResponse` dùng signature có `request` là tham số đầu; cần bọc helper tương thích để tránh lỗi 500 hàng loạt ở tất cả trang render template.
 - Runtime Docker của dự án xếp lịch chuẩn hóa cổng web `8000:8000`; README và thao tác vận hành cần thống nhất URL `http://localhost:8000`.
 - Khi mở một lịch đã xếp cũ, hệ thống phải auto backfill nhân viên mới cho đủ 7 ngày vào nhóm `CHUA_XEP` (idempotent, không tạo duplicate) để người vận hành kéo-thả tiếp trên lịch lịch sử.
+- Khi cập nhật code cho máy Windows chạy Docker, ưu tiên dùng script `scripts/windows_update_code.ps1` (pull ff-only + build web); tuyệt đối tránh `docker compose down -v` trong flow update để không làm mất DB local.

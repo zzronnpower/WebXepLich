@@ -17,6 +17,27 @@ Mo trinh duyet tai: `http://localhost:8000`
 
 ## Deploy sang may Windows khac (giu nguyen DB hien tai)
 
+### Cap nhat code tren may Windows dich (KHONG anh huong DB)
+
+Sau khi may nguon da `git push`, tren may Windows dich chay:
+
+```powershell
+git pull --ff-only origin main
+powershell -ExecutionPolicy Bypass -File .\scripts\windows_update_code.ps1 -Branch main
+```
+
+Script tren se:
+
+- `fetch/pull` code moi
+- build lai `web` service
+- giu nguyen du lieu DB (khong `down -v`, khong reset)
+
+Ban co the dung file bat de chay nhanh:
+
+```bat
+scripts\windows_update_code.bat main
+```
+
 ### 1) Tren may nguon (dang chay du an)
 
 ```bash

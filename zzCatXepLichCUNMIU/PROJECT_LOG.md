@@ -62,6 +62,16 @@
 - Added theme token overrides in `backend/app/static/style.css` and floating selector dock.
 - Wired theme script in `backend/app/templates/base.html` so all pages share the same theme selection.
 
+## Latest Update (2026-04-08, windows docker update flow without touching DB)
+
+- Added cross-machine Windows update script for Docker runtime:
+  - New `scripts/windows_update_code.ps1` to run `git fetch/pull --ff-only`, then `docker compose up -d --build web`.
+  - Script auto-stashes local uncommitted changes before pull and restores them after update.
+  - DB safety guard by design: update flow never runs `docker compose down -v`, never resets DB.
+- Added quick launcher `scripts/windows_update_code.bat` for one-click use on Windows.
+- Updated `README.md` with a dedicated section "Cap nhat code tren may Windows dich (KHONG anh huong DB)".
+- Added ops rule in `AGENTS.md` to standardize non-destructive update behavior on Windows Docker deployments.
+
 ## Latest Update (2026-03-23, complete local cleanup + migration script + template compatibility fix)
 
 - Completed full local cleanup to ensure UI no longer shows `796ADV` on any management screen:
