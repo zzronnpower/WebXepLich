@@ -549,6 +549,70 @@ def tai_du_lieu_ngay_nghi(phien: Session, ngay_bat_dau: date) -> tuple[list[date
     return ngay_list_nghi, ngay_nghi_theo_ngay
 
 
+def dong_bo_nhan_vien_moi_vao_lich_tuan(phien: Session, lich_tuan: models.LichTuan) -> int:
+    nhom_chua_xep = (
+        phien.query(models.NhomHienThi)
+        .filter(models.NhomHienThi.ten_nhom == "CHUA_XEP")
+        .first()
+    )
+    if not nhom_chua_xep:
+        nhom_chua_xep = models.NhomHienThi(ten_nhom="CHUA_XEP", mau_nen="#f4f4f4")
+        phien.add(nhom_chua_xep)
+        phien.flush()
+
+    ngay_list = danh_sach_ngay_trong_tuan(lich_tuan.ngay_bat_dau)
+    ds_nhan_vien = (
+        phien.query(models.NhanVien)
+        .order_by(models.NhanVien.ten_nv.asc(), models.NhanVien.id.asc())
+        .all()
+    )
+    if not ds_nhan_vien:
+        return 0
+
+    lich_hien_co = (
+        phien.query(models.LichChiTiet.nhan_vien_id, models.LichChiTiet.ngay)
+        .filter(models.LichChiTiet.lich_tuan_id == lich_tuan.id)
+        .filter(models.LichChiTiet.ngay >= ngay_list[0])
+        .filter(models.LichChiTiet.ngay <= ngay_list[-1])
+        .all()
+    )
+    da_co_set = {(nv_id, ngay) for nv_id, ngay in lich_hien_co}
+
+    max_thu_tu_rows = (
+        phien.query(models.LichChiTiet.ngay, func.max(models.LichChiTiet.thu_tu))
+        .filter(models.LichChiTiet.lich_tuan_id == lich_tuan.id)
+        .filter(models.LichChiTiet.nhom_hien_thi_id == nhom_chua_xep.id)
+        .group_by(models.LichChiTiet.ngay)
+        .all()
+    )
+    thu_tu_theo_ngay = {ngay: int(max_thu_tu or 0) for ngay, max_thu_tu in max_thu_tu_rows}
+    for ngay in ngay_list:
+        thu_tu_theo_ngay.setdefault(ngay, 0)
+
+    so_ban_ghi_them = 0
+    for ngay in ngay_list:
+        for nv in ds_nhan_vien:
+            if (nv.id, ngay) in da_co_set:
+                continue
+            thu_tu_theo_ngay[ngay] += 1
+            phien.add(
+                models.LichChiTiet(
+                    lich_tuan_id=lich_tuan.id,
+                    ngay=ngay,
+                    chi_nhanh_id=None,
+                    ca_id=None,
+                    nhan_vien_id=nv.id,
+                    nhom_hien_thi_id=nhom_chua_xep.id,
+                    thu_tu=thu_tu_theo_ngay[ngay],
+                )
+            )
+            so_ban_ghi_them += 1
+
+    if so_ban_ghi_them:
+        phien.commit()
+    return so_ban_ghi_them
+
+
 def lay_lich_hien_thi(phien: Session, lich_tuan_id: int | None):
     lich_tuan = None
     if lich_tuan_id:
@@ -562,6 +626,14 @@ def lay_lich_hien_thi(phien: Session, lich_tuan_id: int | None):
         )
     if not lich_tuan:
         return None
+
+    so_ban_ghi_bo_sung = dong_bo_nhan_vien_moi_vao_lich_tuan(phien, lich_tuan)
+    if so_ban_ghi_bo_sung:
+        logger.info(
+            "dong_bo_nhan_vien_moi_vao_lich_tuan lich_tuan_id=%s added_rows=%s",
+            lich_tuan.id,
+            so_ban_ghi_bo_sung,
+        )
 
     nhom_list = phien.query(models.NhomHienThi).all()
     nhom_list = sorted(

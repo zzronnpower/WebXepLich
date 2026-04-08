@@ -10,8 +10,6 @@ docker compose up -d --build
 
 Mo trinh duyet tai: `http://localhost:8000`
 
-Luu y: trong `docker-compose.yml` hien tai, web map `8001:8000`, vi vay truy cap `http://localhost:8001`.
-
 ## Luu y WSL (Linux tren Windows)
 
 - Bat Docker Desktop va WSL integration cho distro dang dung.
@@ -45,7 +43,7 @@ Chay script all-in-one (build + restore):
 powershell -ExecutionPolicy Bypass -File .\scripts\windows_setup_and_restore.ps1 -DumpPath .\backups\lich_dump.sql.gz
 ```
 
-Mo app tai: `http://localhost:8001`
+Mo app tai: `http://localhost:8000`
 
 Kiem tra port 8000:
 

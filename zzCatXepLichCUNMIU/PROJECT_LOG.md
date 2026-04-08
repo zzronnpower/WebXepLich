@@ -601,3 +601,23 @@ This will wipe existing data and re-seed the updated dataset.
 - Behavior note:
   - `Default` remains unchanged as startup fallback.
   - `Aster` only applies after user selects it from theme dock (persisted via localStorage).
+
+## Latest Update (2026-04-08, docker port align 8000)
+
+- Updated compose runtime port mapping for scheduler web service:
+  - `docker-compose.yml` now maps `8000:8000` (replacing `8001:8000`).
+- Updated runbook notes in README:
+  - docker access URL is standardized to `http://localhost:8000` for both Linux/WSL and Windows handoff flow.
+- Operation result:
+  - rebuilt stack with `docker compose up -d --build` and verified service listens on port `8000`.
+
+## Latest Update (2026-04-08, backfill employee into old schedules)
+
+- Added schedule backfill logic in `backend/app/main.py` to keep old schedules editable after employee master-data changes:
+  - new helper `dong_bo_nhan_vien_moi_vao_lich_tuan(...)` runs when loading a schedule.
+  - for each opened `lich_tuan`, system ensures every current employee has a row for all 7 days.
+- Backfill policy for newly added employees in historical schedules:
+  - always create missing rows into `CHUA_XEP` (no branch/shift assignment), matching manual-arrangement workflow.
+  - idempotent by key `(lich_tuan_id, ngay, nhan_vien_id)` so re-opening does not duplicate rows.
+- Ordering behavior:
+  - `thu_tu` is appended from current max per day in `CHUA_XEP` to preserve drag-drop lane consistency.

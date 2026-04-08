@@ -386,6 +386,22 @@
         <div class="goi-y">Assistant</div>
         <p>Đã xử lý dứt điểm trên máy hiện tại: chạy migration SQL `scripts/sql/remove_796adv.sql` để dọn sạch dữ liệu 796 trong DB, rebuild web để nạp code mới, và verify các trang `/`, `/quan-ly`, `/nhan-vien`, `/nhu-cau-ca` đều trả 200 và không còn `796ADV`. Đồng thời fix tương thích `TemplateResponse` theo signature mới của Starlette bằng helper `tra_template(...)` để tránh lỗi 500 toàn trang sau rebuild.</p>
       </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Build docker cho dự án zzXepLich và dùng cổng 8000.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã đổi map cổng Docker của web service từ <code>8001:8000</code> sang <code>8000:8000</code> trong <code>docker-compose.yml</code>, cập nhật README theo URL mới <code>http://localhost:8000</code>, sau đó build lại stack bằng <code>docker compose up -d --build</code> để chạy trực tiếp trên cổng 8000.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Tôi thêm nhân viên mới nhưng mở lịch đã xếp cũ thì không thấy trong mục Nhân viên Chưa xếp; cần để nhân viên mới xuất hiện đủ 7 ngày của lịch cũ để tiếp tục kéo-thả sắp lịch.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã triển khai backfill tự động khi mở lịch: hệ thống đồng bộ nhân viên mới vào từng <code>lich_tuan</code> cũ theo đủ 7 ngày và luôn đưa vào nhóm <code>CHUA_XEP</code> (không gán ca/chi nhánh). Cơ chế idempotent theo key <code>(lich_tuan_id, ngay, nhan_vien_id)</code> nên mở lại nhiều lần không tạo bản ghi trùng.</p>
+      </div>
     </div>
   </section>
 {% endblock %}

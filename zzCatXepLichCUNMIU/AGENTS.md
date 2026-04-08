@@ -306,3 +306,5 @@ Ví dụ flow nút “Xếp lịch”:
 - Cần có script backup chuẩn hóa có bước verify (`gzip -t`, checksum) để giảm rủi ro backup hỏng khi phục hồi.
 - Khi ngừng vận hành một chi nhánh, cần có migration startup idempotent để dọn dữ liệu liên quan và chuyển lịch sử về nhóm an toàn (`CHUA_XEP`) thay vì xóa cứng làm mất lịch cũ.
 - Với stack FastAPI/Starlette mới, `Jinja2Templates.TemplateResponse` dùng signature có `request` là tham số đầu; cần bọc helper tương thích để tránh lỗi 500 hàng loạt ở tất cả trang render template.
+- Runtime Docker của dự án xếp lịch chuẩn hóa cổng web `8000:8000`; README và thao tác vận hành cần thống nhất URL `http://localhost:8000`.
+- Khi mở một lịch đã xếp cũ, hệ thống phải auto backfill nhân viên mới cho đủ 7 ngày vào nhóm `CHUA_XEP` (idempotent, không tạo duplicate) để người vận hành kéo-thả tiếp trên lịch lịch sử.
