@@ -146,6 +146,7 @@ def khoi_tao():
                 dam_bao_cot_ten_lich(phien)
                 dam_bao_cot_spa_off_ghi_chu(phien)
                 dam_bao_trong_so(phien)
+                dam_bao_ca_8h30_197lt5(phien)
                 dam_bao_chi_muc_hieu_nang(phien)
             return
         except Exception:
@@ -161,6 +162,7 @@ def khoi_tao():
         dam_bao_cot_ten_lich(phien)
         dam_bao_cot_spa_off_ghi_chu(phien)
         dam_bao_trong_so(phien)
+        dam_bao_ca_8h30_197lt5(phien)
         dam_bao_chi_muc_hieu_nang(phien)
 
 
@@ -278,7 +280,7 @@ def kiem_tra_admin_token(request: Request, admin_token: str | None = None) -> No
 def danh_sach_ca_theo_nhom() -> dict[str, list[str]]:
     return {
         "326TTV": ["8h-19h", "8h30-19h30", "9h-20h", "10h-21h"],
-        "197LT5": ["8h-19h", "9h-20h", "10h-21h"],
+        "197LT5": ["8h-19h", "8h30-19h30", "9h-20h", "10h-21h"],
         "CN": ["9h-20h"],
         "PHU_SPA": ["8h30-19h30"],
         "OFF": ["Nghỉ"],
@@ -480,6 +482,48 @@ def dam_bao_cot_spa_off_ghi_chu(phien: Session):
 
 def dam_bao_trong_so(phien: Session):
     crud.tao_hoac_cap_nhat_trong_so(phien, "khong_di_chich_ngoai", 6)
+
+
+def dam_bao_ca_8h30_197lt5(phien: Session):
+    try:
+        ca = phien.query(models.CaLam).filter(models.CaLam.ten_ca == "8h30-19h30").first()
+        if not ca:
+            ca = models.CaLam(
+                ten_ca="8h30-19h30",
+                gio_bat_dau="8h30",
+                gio_ket_thuc="19h30",
+                so_gio=11,
+                la_ca_muon=False,
+            )
+            phien.add(ca)
+            phien.flush()
+        chi_nhanh = (
+            phien.query(models.ChiNhanh)
+            .filter(or_(models.ChiNhanh.ma_chi_nhanh == "197", models.ChiNhanh.ten_chi_nhanh == "197LT5"))
+            .first()
+        )
+        nhom = phien.query(models.NhomHienThi).filter(models.NhomHienThi.ten_nhom == "197LT5").first()
+        if not chi_nhanh or not nhom:
+            phien.commit()
+            return
+        ton_tai = (
+            phien.query(models.MappingNhom)
+            .filter(models.MappingNhom.chi_nhanh_id == chi_nhanh.id)
+            .filter(models.MappingNhom.ca_id == ca.id)
+            .filter(models.MappingNhom.nhom_hien_thi_id == nhom.id)
+            .first()
+        )
+        if not ton_tai:
+            phien.add(
+                models.MappingNhom(
+                    chi_nhanh_id=chi_nhanh.id,
+                    ca_id=ca.id,
+                    nhom_hien_thi_id=nhom.id,
+                )
+            )
+        phien.commit()
+    except Exception:
+        phien.rollback()
 
 
 def dam_bao_chi_muc_hieu_nang(phien: Session):

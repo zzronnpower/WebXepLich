@@ -410,6 +410,14 @@
         <div class="goi-y">Assistant</div>
         <p>Da them bo script <code>scripts/windows_update_code.ps1</code> va <code>scripts/windows_update_code.bat</code>: tu dong <code>fetch/pull --ff-only</code>, build lai service web, giu nguyen DB volume (khong down -v, khong reset). Dong thoi cap nhat README voi huong dan cap nhat code an toan cho may Windows dich.</p>
       </div>
+      <div class="the">
+        <div class="goi-y">User</div>
+        <p>Thêm ca làm việc <code>8h30-19h30</code> cho chi nhánh <code>197LT5</code>, chỉ thêm riêng chi nhánh này; sau đó build Docker chạy cổng 8000.</p>
+      </div>
+      <div class="the">
+        <div class="goi-y">Assistant</div>
+        <p>Đã thêm lane <code>8h30-19h30</code> cho riêng nhóm <code>197LT5</code>, cập nhật solver để tự bổ sung nhu cầu ca này khi bấm <code>XẾP LỊCH</code>, thêm seed/migration startup idempotent để DB hiện tại có mapping <code>197LT5 + 8h30-19h30</code> mà không cần reset dữ liệu.</p>
+      </div>
     </div>
   </section>
 {% endblock %}

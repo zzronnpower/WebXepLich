@@ -90,7 +90,7 @@ def tao_du_lieu_mau(phien: Session):
     for ca in ca_lam:
         if ca.ten_ca in {"8h-19h", "8h30-19h30", "9h-20h", "10h-21h"}:
             map_nhom(cn326.id, ca.id, nhom[0])
-        if ca.ten_ca in {"8h-19h", "9h-20h", "10h-21h"}:
+        if ca.ten_ca in {"8h-19h", "8h30-19h30", "9h-20h", "10h-21h"}:
             map_nhom(cn197.id, ca.id, nhom[1])
         if ca.ten_ca in {"9h-20h"}:
             map_nhom(None, ca.id, nhom[2])

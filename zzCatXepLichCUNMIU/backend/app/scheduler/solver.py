@@ -141,6 +141,8 @@ def bo_sung_nhu_cau_bat_buoc(
         ca_bat_buoc = [ca_9_20, ca_10_21]
         if cn.ten_chi_nhanh == "197LT5" and ca_8_19:
             ca_bat_buoc = [ca_8_19, ca_9_20, ca_10_21]
+            if ca_8_30_19_30:
+                ca_bat_buoc = [ca_8_19, ca_8_30_19_30, ca_9_20, ca_10_21]
         if cn.ten_chi_nhanh == "326TTV" and ca_8_19:
             ca_bat_buoc = [ca_8_19, ca_9_20, ca_10_21]
             if ca_8_30_19_30:

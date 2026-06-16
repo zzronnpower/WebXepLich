@@ -631,3 +631,15 @@ This will wipe existing data and re-seed the updated dataset.
   - idempotent by key `(lich_tuan_id, ngay, nhan_vien_id)` so re-opening does not duplicate rows.
 - Ordering behavior:
   - `thu_tu` is appended from current max per day in `CHUA_XEP` to preserve drag-drop lane consistency.
+
+## Latest Update (2026-06-16, add 8h30-19h30 shift for 197LT5)
+
+- Added shift `8h30-19h30` specifically for branch/group `197LT5` on the weekly schedule board:
+  - `danh_sach_ca_theo_nhom()` now renders `197LT5` with lanes `8h-19h`, `8h30-19h30`, `9h-20h`, `10h-21h`.
+  - Drag/drop save keeps using explicit `ca_id` per lane and the existing max-2-people-per-shift backend rule.
+- Updated solver required-demand bootstrap:
+  - `bo_sung_nhu_cau_bat_buoc()` now auto-adds `8h30-19h30` demand for `197LT5` when running `XẾP LỊCH`.
+  - Existing behavior for `326TTV`, `CN`, `PHU_SPA`, `OFF`, and `CHUA_XEP` is unchanged.
+- Added DB-safe rollout support:
+  - Fresh seed maps `197LT5 + 8h30-19h30` to group `197LT5`.
+  - Startup helper `dam_bao_ca_8h30_197lt5(...)` creates the shift if missing and inserts the mapping idempotently so current DB volumes do not need reset.
